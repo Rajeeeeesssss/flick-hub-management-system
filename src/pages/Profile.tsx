@@ -88,6 +88,7 @@ const Profile = () => {
                   </div>
                 </div>
                 <div>
+                  {/* Place cancel option INSIDE each booking block */}
                   {b.status === "active" ? (
                     <Button variant="destructive" size="sm" onClick={() => handleCancel(b.id)} disabled={loading}>
                       <X className="w-4 h-4 mr-1" /> Cancel

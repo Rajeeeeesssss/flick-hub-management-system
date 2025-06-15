@@ -33,7 +33,8 @@ const MovieDetail = () => {
     setDialogOpen(true);
   };
 
-  const handleBookConfirm = async (seat: string, showTime: string) => {
+  // Add language option to booking
+  const handleBookConfirm = async (seat: string, showTime: string, language: string) => {
     setBookingLoading(true);
     // Check if already booked (active)
     const { data: existing } = await supabase
@@ -64,6 +65,7 @@ const MovieDetail = () => {
         seat_number: seat,
         show_time: showDate.toISOString(),
         status: "active",
+        language: language, // For future extension, not in table yet
       },
     ]);
     setBookingLoading(false);
