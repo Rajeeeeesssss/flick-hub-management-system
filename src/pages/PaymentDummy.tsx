@@ -1,4 +1,3 @@
-
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -6,6 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+const TICKET_PRICE = 8; // ensure same as in other files
 
 const PaymentDummy = () => {
   const navigate = useNavigate();
@@ -106,16 +107,19 @@ const PaymentDummy = () => {
             <span className="font-semibold">Movie</span>: {bookingInfo.movieId}
           </div>
           <div>
-            <span className="font-semibold">Seat{bookingInfo.seats.length > 1 ? "s" : ""}</span>: {bookingInfo.seats.join(", ")}
+            <span className="font-semibold">Seats</span>: {bookingInfo.seats.join(", ")}
+          </div>
+          <div>
+            <span className="font-semibold">Price per ticket</span>: ${TICKET_PRICE.toFixed(2)}
+          </div>
+          <div>
+            <span className="font-semibold">Total</span>: <span className="font-bold">${bookingInfo.totalPrice.toFixed(2)}</span>
           </div>
           <div>
             <span className="font-semibold">Language</span>: {bookingInfo.language}
           </div>
           <div>
             <span className="font-semibold">Show Time</span>: {bookingInfo.showTime}
-          </div>
-          <div className="text-lg font-bold mt-4">
-            Total Payment: ${bookingInfo.totalPrice.toFixed(2)}
           </div>
         </div>
         <Button onClick={handlePayment} disabled={loading}>

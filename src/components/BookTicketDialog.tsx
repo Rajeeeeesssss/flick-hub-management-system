@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -62,13 +61,12 @@ export default function BookTicketDialog({
     );
   };
 
+  const totalPrice = selectedSeats.length * TICKET_PRICE;
+
   const handleConfirm = () => {
     if (selectedSeats.length === 0) return;
-    const total = selectedSeats.length * TICKET_PRICE;
-    onConfirm(selectedSeats, showTime, language, total);
+    onConfirm(selectedSeats, showTime, language, totalPrice);
   };
-
-  const totalPrice = selectedSeats.length * TICKET_PRICE;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

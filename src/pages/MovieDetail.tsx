@@ -41,7 +41,7 @@ const MovieDetail = () => {
     setDialogOpen(true);
   };
 
-  // New: Move booking creation after fake payment!
+  // Show the BookTicketDialog and after confirm, send booking data to PaymentDummy (no DB writes yet)
   const handleBookConfirm = (seats: string[], showTime: string, language: string, totalPrice: number) => {
     setDialogOpen(false);
     setPendingBooking({ seats, showTime, language, totalPrice });
