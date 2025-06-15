@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -5,30 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useAdminRole } from "@/hooks/useAdminRole";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 import { useToast } from "@/hooks/use-toast";
 
-type AuthView = "login" | "signup";
+// AuthView: login, signup, or reset password
+type AuthView = "login" | "signup" | "reset";
 const ADMIN_EMAIL = "rajesh9933123@gmail.com";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [signupConfirmation, setSignupConfirmation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
   const { toast } = useToast();
 
-  // Redirect logic - wait for auth loading before redirect
+  // Redirect logic: after successful login
   if (!authLoading && user && window.location.pathname === "/auth") {
     setTimeout(() => navigate("/"), 100);
     return (
@@ -38,152 +33,65 @@ const AuthPage = () => {
     );
   }
 
-  const handleAuth = async (e: React.FormEvent) => {
+  // OTP Magic Link: for login/signup/reset
+  const handleOtpAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
+    setOtpSent(false);
     cleanupAuthState();
     try {
       await supabase.auth.signOut({ scope: "global" });
-    } catch {
-      // Ignore
-    }
+    } catch {}
 
-    if (authView === "signup") {
-      // Validation
-      if (!email || !password || !confirmPassword || !fullName || !phone) {
-        setError("All fields are required.");
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: "All fields are required."
-        });
-        setLoading(false);
-        return;
+    // All flows: signInWithOtp
+    let actionDesc = "";
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: authView === "signup",
+        emailRedirectTo: `${window.location.origin}/auth`
       }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: "Passwords do not match."
-        });
-        setLoading(false);
-        return;
-      }
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
-          data: { full_name: fullName, phone },
-        }
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      toast({
+        variant: "destructive",
+        title: "OTP Error",
+        description: error.message,
       });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: error.message
-        });
-      } else {
-        setSignupConfirmation(true);
-        toast({
-          variant: "default",
-          title: "Signup Success",
-          description: "Check your email to verify and complete signup."
-        });
-      }
-      return;
-    }
-
-    if (authView === "login") {
-      if (!email || !password) {
-        setError("Email and password are required.");
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: "Email and password are required."
-        });
-        setLoading(false);
-        return;
-      }
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    } else {
+      setOtpSent(true);
+      if (authView === "login") actionDesc = "Login link sent! Check your email (including spam).";
+      else if (authView === "signup") actionDesc = "Signup complete! Check your email for the login link.";
+      else actionDesc = "Reset link sent! Check your email for OTP/magic link.";
+      toast({
+        variant: "default",
+        title: "OTP Sent",
+        description: actionDesc,
       });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: error.message,
-        });
-      } else {
-        toast({
-          variant: "default",
-          title: "Login Success",
-          description: "Logged in! Redirecting...",
-        });
-        window.location.href = "/";
-      }
     }
   };
 
-  // Manual login mode switching logic, simplified: NO admin login here
+  // Change state for signup/login/reset
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setOtpSent(false);
     setError(null);
   };
 
-  // Do not show admin login options here
-  // Only show normal user login/signup UI
-
+  // UI
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
+      <form onSubmit={handleOtpAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
         {/* Home navigation */}
         <div className="flex justify-between">
           <a href="/" className="text-primary text-xs underline">Home</a>
-          {/* Removed: <a href="/admin-login" ...>Go to Admin Login</a> */}
         </div>
         <h1 className="font-bold text-2xl text-center">
-          {authView === "login" ? "Sign In" : "Sign Up"}
+          {authView === "login" ? "Sign In with OTP" : authView === "signup" ? "Sign Up with OTP" : "Reset Password via OTP"}
         </h1>
-        {/* New fields for signup */}
-        {(authView === "signup") && (
-          <>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Enter your full name"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
-                required
-                className="mt-1"
-              />
-            </div>
-          </>
-        )}
-        {/* All views: email input */}
         <div>
           <Label htmlFor="email">Email</Label>
           <Input
@@ -197,69 +105,30 @@ const AuthPage = () => {
             className="mt-1"
           />
         </div>
-        {/* Password fields */}
-        {(authView === "login") && (
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              className="mt-1"
-            />
-          </div>
-        )}
-        {(authView === "signup") && (
-          <>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                required
-                className="mt-1"
-              />
-            </div>
-          </>
-        )}
         {error && <div className="text-red-600 text-sm">{error}</div>}
-        {/* Show confirmation on successful signup */}
-        {signupConfirmation && (
+        {/* OTP status */}
+        {otpSent && (
           <div className="text-green-600 text-center text-sm">
-            A verification email has been sent.<br />
-            Please check your inbox and click the confirmation link to verify your email.
+            {authView === "reset"
+              ? "Reset link sent! Check your inbox for the OTP/magic link."
+              : "OTP/magic link sent! Check your inbox to complete the login."}
           </div>
         )}
-        {/* Regular login/signup button */}
-        {!signupConfirmation && (
+        {/* Send OTP button */}
+        {!otpSent && (
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
+            {loading
+              ? "Please wait..."
+              : authView === "login"
+                ? "Send Login OTP"
+                : authView === "signup"
+                  ? "Send Signup OTP"
+                  : "Send Reset OTP"}
           </Button>
         )}
-        {/* Auth view switching for signup/login */}
+        {/* Auth view switching for signup/login/reset */}
         <div className="text-center text-sm mt-2">
-          {!signupConfirmation && (
+          {!otpSent && (
             <>
               {authView === "login" ? (
                 <>
@@ -271,10 +140,30 @@ const AuthPage = () => {
                   >
                     Sign up
                   </button>
+                  <br/>
+                  Forgot password?{" "}
+                  <button
+                    type="button"
+                    className="text-primary underline"
+                    onClick={() => setAuthView("reset")}
+                  >
+                    Reset
+                  </button>
+                </>
+              ) : authView === "signup" ? (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    className="text-primary underline"
+                    onClick={() => setAuthView("login")}
+                  >
+                    Login
+                  </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{" "}
+                  Back to{" "}
                   <button
                     type="button"
                     className="text-primary underline"
@@ -287,15 +176,14 @@ const AuthPage = () => {
             </>
           )}
         </div>
-        {/* Removed: Admin Login link */}
         {/* Helper info */}
         {!user && (
           <div className="text-center text-sm mt-6 text-muted-foreground">
             <b>Trouble logging in?</b>
             <div>
-              - Make sure your email is confirmed.<br/>
-              - If you just signed up, check for a verification mail.<br/>
-              - If you can't log in, try logging out on all devices and clear cookies/localStorage.
+              - Make sure you entered your email correctly.<br/>
+              - Check spam if you don't see your OTP link.<br/>
+              - Try logging out on all devices and clear cookies/localStorage.
             </div>
           </div>
         )}
@@ -305,3 +193,4 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
+
