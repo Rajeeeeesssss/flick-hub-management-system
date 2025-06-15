@@ -46,12 +46,12 @@ const Header = () => {
         <div className="ml-auto flex items-center gap-3">
           {user ? (
             <>
-              <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
+              <Link to="/profile" className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md hover:bg-muted/80">
                 <UserIcon className="w-4 h-4" />
                 <span className="font-semibold text-xs truncate max-w-[100px]" title={user.email || undefined}>
                   {user.email}
                 </span>
-              </div>
+              </Link>
               <Button onClick={handleSignOut} size="sm" variant="ghost" disabled={loggingOut}>
                 <LogOut className="w-4 h-4" /> <span className="sr-only">Sign out</span>
               </Button>

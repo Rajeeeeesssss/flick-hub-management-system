@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { movies } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import UserBookings from "./UserBookings";
+import BookTicketDialog from "@/components/BookTicketDialog";
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,17 +18,22 @@ const MovieDetail = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
 
   if (!movie) {
     return <NotFound />;
   }
 
-  const handleBookClick = async () => {
+  const handleBookClick = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
+    setDialogOpen(true);
+  };
+
+  const handleBookConfirm = async (seat: string, showTime: string) => {
     setBookingLoading(true);
     // Check if already booked (active)
     const { data: existing } = await supabase
@@ -45,17 +50,24 @@ const MovieDetail = () => {
         variant: "destructive",
       });
       setBookingLoading(false);
+      setDialogOpen(false);
       return;
     }
-    // Insert booking
+    // Calculate full show time (today's date + selected time)
+    const today = new Date();
+    const [hour, min] = showTime.split(":");
+    const showDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hour), parseInt(min), 0);
     const { error } = await supabase.from("bookings").insert([
       {
         user_id: user.id,
         movie_id: movie.id,
+        seat_number: seat,
+        show_time: showDate.toISOString(),
         status: "active",
       },
     ]);
     setBookingLoading(false);
+    setDialogOpen(false);
     if (error) {
       toast({
         title: "Booking Failed",
@@ -106,8 +118,14 @@ const MovieDetail = () => {
                 onClick={handleBookClick}
                 disabled={loading || bookingLoading}
               >
-                {user ? (bookingLoading ? "Booking..." : "Book Tickets Now") : "Login to Book Tickets"}
+                {user ? "Book Tickets Now" : "Login to Book Tickets"}
               </Button>
+              <BookTicketDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                onConfirm={handleBookConfirm}
+                loading={bookingLoading}
+              />
             </div>
 
             {/* Booking list for this movie, for the current user */}
