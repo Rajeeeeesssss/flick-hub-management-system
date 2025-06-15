@@ -1,4 +1,5 @@
 
+import * as React from "react";
 import { Link } from "react-router-dom";
 import { Movie } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +8,16 @@ import { Star } from "lucide-react";
 interface MovieCardProps {
   movie: Movie;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const MovieCard = ({ movie, className }: MovieCardProps) => {
+const MovieCard = ({ movie, className, style }: MovieCardProps) => {
   return (
-    <Link to={`/movie/${movie.id}`} className={`group block overflow-hidden rounded-lg ${className}`}>
+    <Link
+      to={`/movie/${movie.id}`}
+      className={`group block overflow-hidden rounded-lg ${className}`}
+      style={style}
+    >
       <div className="relative">
         <img
           src={movie.posterUrl}
