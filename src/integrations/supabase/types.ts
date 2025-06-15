@@ -14,6 +14,7 @@ export type Database = {
           cancelled_at: string | null
           created_at: string
           id: string
+          language: string | null
           movie_id: number
           seat_number: string
           show_time: string
@@ -24,6 +25,7 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           id?: string
+          language?: string | null
           movie_id: number
           seat_number?: string
           show_time?: string
@@ -34,6 +36,7 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           id?: string
+          language?: string | null
           movie_id?: number
           seat_number?: string
           show_time?: string
