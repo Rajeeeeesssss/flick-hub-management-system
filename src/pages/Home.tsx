@@ -1,14 +1,17 @@
-
 import { movies } from "@/data/movies";
 import MovieCard from "@/components/MovieCard";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import MovieSearchBar from "@/components/MovieSearchBar";
 
 const Home = () => {
   const heroMovie = movies[0];
 
   return (
     <div className="flex-1">
+      {/* Movie SearchBar */}
+      <MovieSearchBar />
+      {/* Hero section */}
       <section className="relative w-full h-[60vh] md:h-[80vh] animate-fade-in">
         <div className="absolute inset-0 bg-black/50 z-10" />
         <img src={heroMovie.heroUrl} alt={heroMovie.title} className="w-full h-full object-cover"/>
