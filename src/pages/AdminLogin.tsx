@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -106,12 +105,6 @@ const AdminLogin = () => {
             OTP link sent! Check admin email to complete login.
           </div>
         )}
-        <div className="text-center text-xs mt-4">
-          <a
-            href="/auth"
-            className="text-primary underline"
-          >Go to User Login</a>
-        </div>
         <div className="absolute top-2 right-2 text-[10px] text-primary/30">Admin Only</div>
       </form>
     </div>

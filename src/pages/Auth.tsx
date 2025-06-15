@@ -147,8 +147,9 @@ const AuthPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
         {/* Home navigation */}
-        <div className="flex justify-end">
-          <a href="/" className="text-primary text-xs underline">Back to Home</a>
+        <div className="flex justify-between">
+          <a href="/" className="text-primary text-xs underline">Home</a>
+          {/* Removed: <a href="/admin-login" ...>Go to Admin Login</a> */}
         </div>
         <h1 className="font-bold text-2xl text-center">
           {authView === "login" ? "Sign In" : "Sign Up"}
@@ -196,7 +197,6 @@ const AuthPage = () => {
             className="mt-1"
           />
         </div>
-
         {/* Password fields */}
         {(authView === "login") && (
           <div>
@@ -243,9 +243,7 @@ const AuthPage = () => {
             </div>
           </>
         )}
-
         {error && <div className="text-red-600 text-sm">{error}</div>}
-
         {/* Show confirmation on successful signup */}
         {signupConfirmation && (
           <div className="text-green-600 text-center text-sm">
@@ -253,14 +251,12 @@ const AuthPage = () => {
             Please check your inbox and click the confirmation link to verify your email.
           </div>
         )}
-
         {/* Regular login/signup button */}
         {!signupConfirmation && (
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
           </Button>
         )}
-
         {/* Auth view switching for signup/login */}
         <div className="text-center text-sm mt-2">
           {!signupConfirmation && (
@@ -291,12 +287,7 @@ const AuthPage = () => {
             </>
           )}
         </div>
-        <div className="text-center text-xs mt-4">
-          <a
-            href="/admin-login"
-            className="text-primary underline"
-          >Go to Admin Login</a>
-        </div>
+        {/* Removed: Admin Login link */}
         {/* Helper info */}
         {!user && (
           <div className="text-center text-sm mt-6 text-muted-foreground">
