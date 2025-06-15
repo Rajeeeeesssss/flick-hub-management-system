@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import clsx from "clsx";
+
+// -- Ticket price:
+const TICKET_PRICE = 8; // $8 per ticket
 
 type ShowTimeOption = {
   label: string;
@@ -38,7 +40,7 @@ const LANGUAGES = [
 export interface BookTicketDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onConfirm: (seats: string[], showTime: string, language: string) => Promise<void>;
+  onConfirm: (seats: string[], showTime: string, language: string, totalPrice: number) => void;
   loading: boolean;
 }
 
@@ -60,10 +62,13 @@ export default function BookTicketDialog({
     );
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (selectedSeats.length === 0) return;
-    await onConfirm(selectedSeats, showTime, language);
+    const total = selectedSeats.length * TICKET_PRICE;
+    onConfirm(selectedSeats, showTime, language, total);
   };
+
+  const totalPrice = selectedSeats.length * TICKET_PRICE;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -135,10 +140,20 @@ export default function BookTicketDialog({
               ))}
             </select>
           </div>
+          {/* Price Info */}
+          <div className="p-3 rounded bg-muted text-primary font-medium text-center flex flex-col items-center gap-1">
+            <span>
+              Price per ticket: <span className="font-semibold">${TICKET_PRICE.toFixed(2)}</span>
+            </span>
+            <span>
+              Total ({selectedSeats.length} ticket{selectedSeats.length !== 1 && "s"}):{" "}
+              <span className="font-bold text-lg">${totalPrice.toFixed(2)}</span>
+            </span>
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={handleConfirm} disabled={loading || selectedSeats.length === 0}>
-            {loading ? "Booking..." : `Confirm (${selectedSeats.length} Ticket${selectedSeats.length > 1 ? 's' : ''})`}
+            {loading ? "Processing..." : `Proceed to Payment (${selectedSeats.length} Ticket${selectedSeats.length > 1 ? 's' : ''})`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import UserBookings from "./UserBookings";
 import BookTicketDialog from "@/components/BookTicketDialog";
 
+const TICKET_PRICE = 8; // $8 per ticket
+
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
   const movie = movies.find((m) => m.id === Number(id));
@@ -20,6 +22,12 @@ const MovieDetail = () => {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<{
+    seats: string[];
+    showTime: string;
+    language: string;
+    totalPrice: number;
+  } | null>(null);
 
   if (!movie) {
     return <NotFound />;
@@ -33,60 +41,19 @@ const MovieDetail = () => {
     setDialogOpen(true);
   };
 
-  // Add language option to booking
-  const handleBookConfirm = async (seats: string[], showTime: string, language: string) => {
-    setBookingLoading(true);
-    const errors: string[] = [];
-    // Calculate show time date
-    const today = new Date();
-    const [hour, min] = showTime.split(":");
-    const showDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hour), parseInt(min), 0);
-
-    // Prepare batch insert for all selected seats
-    const inserts = seats.map(seat => ({
-      user_id: user.id,
-      movie_id: movie.id,
-      seat_number: seat,
-      show_time: showDate.toISOString(),
-      status: "active",
-      language: language,
-    }));
-
-    // Check if user has any existing active bookings for this movie & show time & seat
-    const { data: existing } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("movie_id", movie.id)
-      .eq("status", "active")
-      .eq("show_time", showDate.toISOString());
-
-    if (existing && existing.some(b => seats.includes(b.seat_number))) {
-      toast({
-        title: "Seat already booked",
-        description: "You already booked one or more of the selected seats at this time!",
-        variant: "destructive",
-      });
-      setBookingLoading(false);
-      setDialogOpen(false);
-      return;
-    }
-
-    const { error } = await supabase.from("bookings").insert(inserts);
-    setBookingLoading(false);
+  // New: Move booking creation after fake payment!
+  const handleBookConfirm = (seats: string[], showTime: string, language: string, totalPrice: number) => {
     setDialogOpen(false);
-    const navigate = useNavigate(); // move hook up if not already present
-
-    if (error) {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      // Instead of just toasting, redirect to payment dummy page
-      navigate("/payment-dummy");
-    }
+    setPendingBooking({ seats, showTime, language, totalPrice });
+    navigate("/payment-dummy", {
+      state: {
+        movieId: movie.id,
+        seats,
+        showTime,
+        language,
+        totalPrice,
+      }
+    });
   };
 
   return (
