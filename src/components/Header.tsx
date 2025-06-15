@@ -1,10 +1,10 @@
-
 import { Link, useNavigate } from "react-router-dom";
 import { Film, LogIn, User as UserIcon, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { cleanupAuthState } from "@/hooks/cleanupAuth";
 
 const Header = () => {
   const { user } = useAuth();
@@ -13,7 +13,12 @@ const Header = () => {
 
   const handleSignOut = async () => {
     setLoggingOut(true);
-    await supabase.auth.signOut();
+    cleanupAuthState();
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch (e) {
+      // Ignore errors
+    }
     window.location.href = "/auth";
   };
 

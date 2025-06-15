@@ -34,18 +34,17 @@ const AdminPage = () => {
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
   const navigate = useNavigate();
 
-  // Protect admin route
-  if (!loading && (!user || loadingAdminRole)) {
-    // Still checking, show nothing
+  // Improved robust admin protection
+  if (loading || loadingAdminRole) {
     return <div className="flex h-screen items-center justify-center"><span>Loading...</span></div>;
   }
-  if (!loading && user && isAdmin === false) {
+  if (!user) {
     setTimeout(() => navigate("/auth"), 100);
     return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
   }
-  if (!user && !loading) {
+  if (isAdmin === false) {
     setTimeout(() => navigate("/auth"), 100);
-    return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
+    return <div className="flex h-screen items-center justify-center">You do not have admin access. Redirecting...</div>;
   }
 
   return (

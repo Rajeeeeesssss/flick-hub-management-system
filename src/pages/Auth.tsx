@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { cleanupAuthState } from "@/hooks/cleanupAuth";
 
 type AuthView = "login" | "signup" | "otp";
 
@@ -21,11 +22,11 @@ const AuthPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
 
-  // If already logged in, redirect home
-  if (user && window.location.pathname === "/auth") {
+  // Only redirect once auth/user & admin loading are BOTH complete
+  if (!authLoading && user && window.location.pathname === "/auth") {
     setTimeout(() => navigate("/"), 100);
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -38,6 +39,14 @@ const AuthPage = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    // Clean up ALL stale login/session data before logging in/out
+    cleanupAuthState();
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch (err) {
+      // Ignore error on logout
+    }
 
     // Admin: use OTP "magic link" flow
     if (email === ADMIN_EMAIL && authView === "otp") {
@@ -79,8 +88,7 @@ const AuthPage = () => {
       setLoading(false);
       if (error) setError(error.message);
       else {
-        navigate("/");
-        window.location.reload();
+        window.location.href = "/";
       }
     }
   };
@@ -150,7 +158,6 @@ const AuthPage = () => {
             />
           </div>
         )}
-        {/* Show nothing for admin OTP */}
         {error && <div className="text-red-600 text-sm">{error}</div>}
 
         {email === ADMIN_EMAIL && authView === "otp" && (
