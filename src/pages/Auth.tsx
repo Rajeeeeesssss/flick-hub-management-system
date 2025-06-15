@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,6 @@ const AuthPage = () => {
   // Register fields
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirm, setRegisterConfirm] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState(false);
@@ -49,7 +47,6 @@ const AuthPage = () => {
   const resetForm = () => {
     setRegisterName("");
     setRegisterEmail("");
-    setRegisterPhone("");
     setRegisterPassword("");
     setRegisterConfirm("");
     setLoginEmail("");
@@ -72,10 +69,6 @@ const AuthPage = () => {
       setErrors("Email is required.");
       return;
     }
-    if (!registerPhone.trim()) {
-      setErrors("Phone number is required.");
-      return;
-    }
     if (!registerPassword) {
       setErrors("Password is required.");
       return;
@@ -88,15 +81,14 @@ const AuthPage = () => {
 
     cleanupAuthState();
     try {
-      // Try to sign up
+      // Sign up and set the meta data for full_name only.
       const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
         options: {
           emailRedirectTo: window.location.origin + "/auth",
           data: {
-            name: registerName,
-            phone: registerPhone,
+            full_name: registerName,
           },
         },
       });
@@ -112,12 +104,11 @@ const AuthPage = () => {
         return;
       }
 
-      // Now insert a profile to match this user
+      // Upsert the user's profile with full_name only
       if (data.user) {
         await supabase.from("profiles").upsert({
           id: data.user.id,
-          name: registerName,
-          phone: registerPhone,
+          full_name: registerName,
         });
       }
 
@@ -282,19 +273,6 @@ const AuthPage = () => {
                 value={registerEmail}
                 onChange={(e) => setRegisterEmail(e.target.value)}
                 placeholder="you@email.com"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="register_phone">Phone Number</Label>
-              <Input
-                id="register_phone"
-                type="tel"
-                autoComplete="tel"
-                value={registerPhone}
-                onChange={(e) => setRegisterPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
                 required
                 className="mt-1"
               />
