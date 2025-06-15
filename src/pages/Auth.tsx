@@ -176,6 +176,10 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
+        {/* Home navigation added */}
+        <div className="flex justify-end">
+          <a href="/" className="text-primary text-xs underline">Back to Home</a>
+        </div>
         <h1 className="font-bold text-2xl text-center">
           {authView === "otp"
             ? "Admin: OTP Login"
@@ -357,6 +361,17 @@ const AuthPage = () => {
             </>
           )}
         </div>
+        {/* Helper debug info if user is stuck */}
+        {!user && (
+          <div className="text-center text-sm mt-6 text-muted-foreground">
+            <b>Trouble logging in?</b>
+            <div>
+              - Make sure your email is confirmed.<br/>
+              - If you just signed up, check for a verification mail.<br/>
+              - If you can't log in, try logging out on all devices and clear cookies/localStorage.
+            </div>
+          </div>
+        )}
         {/* Admin role warning for admin login */}
         {showAdminOptions && user && !loadingAdminRole && !isAdmin && (
           <div className="bg-yellow-100 border text-yellow-900 px-3 py-2 rounded text-sm mt-2">

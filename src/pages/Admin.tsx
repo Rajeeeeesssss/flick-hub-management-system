@@ -21,51 +21,153 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Info, RefreshCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { movies, Movie } from "@/data/movies";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useNavigate } from "react-router-dom";
+import * as React from "react";
 
-// Utility to check if email is confirmed
 function isEmailConfirmed(user: any) {
-  // For Supabase v2, user?.email_confirmed_at is filled or user?.confirmed_at
   return !!(user?.email_confirmed_at || user?.confirmed_at);
 }
 
 const AdminPage = () => {
   const { user, loading } = useAuth();
-  const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
+  const { data: isAdmin, isLoading: loadingAdminRole, error: adminRoleError } = useAdminRole(user?.id);
   const navigate = useNavigate();
 
+  // Error state for why the admin dashboard is not accessible
+  let debugMessage = "";
+  let action: React.ReactNode = null;
+
+  React.useEffect(() => {
+    // If blocked, set up a delayed redirect (e.g., to login page)
+    if (!loading && !loadingAdminRole && (!user || isAdmin === false)) {
+      const timer = setTimeout(() => navigate("/auth"), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading, isAdmin, loadingAdminRole, navigate]);
+
   if (loading || loadingAdminRole) {
-    return <div className="flex h-screen items-center justify-center"><span>Loading...</span></div>;
-  }
-  if (!user) {
-    setTimeout(() => navigate("/auth"), 100);
-    return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
-  }
-  // Require email verification before access to Admin
-  if (!isEmailConfirmed(user)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-yellow-50">
-        <div className="bg-yellow-100 border border-yellow-300 p-8 rounded shadow">
-          <h2 className="text-xl font-bold mb-2 text-yellow-800">Email Verification Required</h2>
-          <p className="mb-4 text-yellow-800">
-            Please check your email inbox and click the confirmation link we sent you.
+      <div className="flex h-screen items-center justify-center">
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    debugMessage = "No user is currently authenticated. Please log in.";
+    action = (
+      <Button onClick={() => navigate("/auth")}>
+        <Info className="mr-2 h-4 w-4" /> Go to Login
+      </Button>
+    );
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-6">
+        <div className="p-8 rounded bg-red-100 border border-red-300 shadow">
+          <h2 className="text-xl font-bold text-red-900 mb-2">Not Signed In</h2>
+          <p className="text-red-800">{debugMessage}</p>
+          <p className="mt-2 text-red-800 text-sm">
+            The admin dashboard requires authentication.
           </p>
-          <p className="text-yellow-700 text-sm">If you don't see the email, check your spam folder or try logging out and in again to resend the link.</p>
+          {action}
         </div>
       </div>
     );
   }
-  if (isAdmin === false) {
-    setTimeout(() => navigate("/auth"), 100);
-    return <div className="flex h-screen items-center justify-center">You do not have admin access. Redirecting...</div>;
+
+  if (!isEmailConfirmed(user)) {
+    debugMessage = "Your email address is not confirmed. Check your inbox for a verification link from Supabase.";
+    action = (
+      <Button onClick={() => window.location.reload()}>
+        <RefreshCcw className="mr-2 h-4 w-4" /> Reload After Verification
+      </Button>
+    );
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-6 bg-yellow-50">
+        <div className="bg-yellow-100 border border-yellow-300 p-8 rounded shadow">
+          <h2 className="text-xl font-bold mb-2 text-yellow-800">
+            Email Verification Required
+          </h2>
+          <p className="mb-4 text-yellow-800">{debugMessage}</p>
+          <p className="text-yellow-700 text-sm">
+            Still not working? Try logging out and logging in again.
+          </p>
+          {action}
+        </div>
+      </div>
+    );
   }
 
+  if (isAdmin === false) {
+    debugMessage =
+      "You do not have the admin role assigned. This is required for dashboard access.";
+    action = (
+      <Button
+        onClick={() => {
+          window.location.href =
+            "https://supabase.com/dashboard/project/ngfwenmxbgbytzhqesas/sql/new";
+        }}
+        variant="outline"
+      >
+        <Info className="mr-2 h-4 w-4" />
+        Open Supabase SQL - Assign Role
+      </Button>
+    );
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-6">
+        <div className="p-8 rounded bg-yellow-100 border border-yellow-300 shadow">
+          <h2 className="text-xl font-bold text-yellow-900 mb-2">
+            Admin Access Required
+          </h2>
+          <p className="text-yellow-900">{debugMessage}</p>
+          <div className="text-yellow-800 text-sm mt-4">
+            <div>
+              Steps to fix:
+              <ol className="list-decimal ml-6 mt-2 text-yellow-800">
+                <li>Log in to Supabase dashboard.</li>
+                <li>
+                  Run:<br />
+                  <span className="bg-white rounded px-2 py-1 text-xs border border-yellow-300 inline-block mb-1">
+                    select id from auth.users where email = 'YOUR_ADMIN_EMAIL';
+                    <br />
+                    insert into public.user_roles (user_id, role) values ('YOUR-USER-ID', 'admin') on conflict do nothing;
+                  </span>
+                </li>
+                <li>Sign out & sign in again.</li>
+                <li>
+                  <span className="font-medium">If you just signed up, make sure your email address is verified first!</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+          {action}
+        </div>
+      </div>
+    );
+  }
+
+  if (adminRoleError) {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-6">
+        <div className="p-8 rounded bg-red-100 border border-red-300 shadow">
+          <h2 className="text-xl font-bold text-red-900 mb-2">
+            Error Checking Admin Role
+          </h2>
+          <p className="text-red-800">{String(adminRoleError)}</p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCcw className="mr-2 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Admin panel UI ----------
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
