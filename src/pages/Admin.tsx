@@ -1,4 +1,3 @@
-
 import {
   Card,
   CardContent,
@@ -26,8 +25,29 @@ import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { movies, Movie } from "@/data/movies";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdminRole } from "@/hooks/useAdminRole";
+import { useNavigate } from "react-router-dom";
 
 const AdminPage = () => {
+  const { user, loading } = useAuth();
+  const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
+  const navigate = useNavigate();
+
+  // Protect admin route
+  if (!loading && (!user || loadingAdminRole)) {
+    // Still checking, show nothing
+    return <div className="flex h-screen items-center justify-center"><span>Loading...</span></div>;
+  }
+  if (!loading && user && isAdmin === false) {
+    setTimeout(() => navigate("/auth"), 100);
+    return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
+  }
+  if (!user && !loading) {
+    setTimeout(() => navigate("/auth"), 100);
+    return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
