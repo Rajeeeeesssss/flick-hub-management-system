@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,8 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import MovieDetail from "./pages/MovieDetail";
 import AdminPage from "./pages/Admin";
+import AuthPage from "./pages/Auth";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/movie/:id" element={<MovieDetail />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/auth" element={<AuthPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

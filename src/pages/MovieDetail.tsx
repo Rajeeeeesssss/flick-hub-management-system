@@ -1,18 +1,30 @@
-
 import { useParams, Link } from "react-router-dom";
 import { movies, Movie } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Film, Languages, Calendar, User } from "lucide-react";
 import NotFound from "./NotFound";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
   const movie = movies.find((m) => m.id === Number(id));
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   if (!movie) {
     return <NotFound />;
   }
+
+  const handleBookClick = () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    // Future booking logic here.
+    alert("Booking functionality coming soon!");
+  };
 
   return (
     <div className="flex-1 animate-fade-in">
@@ -44,8 +56,11 @@ const MovieDetail = () => {
             <p className="mt-4 text-muted-foreground flex items-center gap-2"><User size={16} /> Directed by {movie.director}</p>
             
             <div className="mt-8">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                Book Tickets Now
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={handleBookClick}
+                disabled={loading}
+              >
+                {user ? "Book Tickets Now" : "Login to Book Tickets"}
               </Button>
             </div>
           </div>
