@@ -29,6 +29,9 @@ const Home = () => {
             <Button asChild size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black">
               <Link to={`/movie/${heroMovie.id}`}>View Details</Link>
             </Button>
+            <Button asChild size="lg" variant="outline" className="border-2 border-primary text-primary bg-white hover:bg-primary hover:text-white">
+              <Link to="/admin-login">Admin</Link>
+            </Button>
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent" />

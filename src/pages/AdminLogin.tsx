@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -11,14 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ShieldAlert } from "lucide-react";
 
 const ADMIN_EMAIL = "rajesh9933123@gmail.com";
-// CHANGE THIS CODE TO WHATEVER YOU WANT (keep private!)
-const ADMIN_SECRET_CODE = "SUPERSECRET1234";
 
 type AuthView = "admin-otp";
 
 const AdminLogin = () => {
   const [email] = useState(ADMIN_EMAIL); // Locked to admin
-  const [secret, setSecret] = useState("");
   const [authView] = useState<AuthView>("admin-otp");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,19 +46,7 @@ const AdminLogin = () => {
     cleanupAuthState();
     try { await supabase.auth.signOut({ scope: "global" }); } catch {}
 
-    // Check the admin secret code!
-    if (secret.trim() !== ADMIN_SECRET_CODE) {
-      setLoading(false);
-      setError("Invalid secret code.");
-      toast({
-        variant: "destructive",
-        title: "Secret Code Error",
-        description: "Wrong secret code. Please try again.",
-      });
-      return;
-    }
-
-    // Admin OTP login only
+    // Admin OTP login only, no secret code
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -106,19 +92,6 @@ const AdminLogin = () => {
               value={email}
               disabled
               className="mt-1 bg-gray-100 font-mono text-gray-700"
-            />
-          </div>
-          <div>
-            <Label htmlFor="admin-secret" className="font-semibold text-primary">Secret Code</Label>
-            <Input
-              id="admin-secret"
-              type="password"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
-              autoComplete="off"
-              required
-              placeholder="Enter admin secret code"
-              className="mt-1 font-mono tracking-widest"
             />
           </div>
         </div>
