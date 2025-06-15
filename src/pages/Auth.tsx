@@ -9,21 +9,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 import { useToast } from "@/hooks/use-toast";
 
-// AuthView: login, signup, or reset password
+/**
+ * OTP-only email authentication page for login, signup, password reset.
+ */
 type AuthView = "login" | "signup" | "reset";
-const ADMIN_EMAIL = "rajesh9933123@gmail.com";
 
+// Only used for redirect logic after log in
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  // Redirect logic: after successful login
+  // Redirect to homepage if already logged in
   if (!authLoading && user && window.location.pathname === "/auth") {
     setTimeout(() => navigate("/"), 100);
     return (
@@ -33,19 +36,18 @@ const AuthPage = () => {
     );
   }
 
-  // OTP Magic Link: for login/signup/reset
+  // Send OTP link to email for login/signup/reset
   const handleOtpAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     setOtpSent(false);
+
     cleanupAuthState();
     try {
       await supabase.auth.signOut({ scope: "global" });
     } catch {}
 
-    // All flows: signInWithOtp
-    let actionDesc = "";
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -53,7 +55,9 @@ const AuthPage = () => {
         emailRedirectTo: `${window.location.origin}/auth`
       }
     });
+
     setLoading(false);
+
     if (error) {
       setError(error.message);
       toast({
@@ -63,34 +67,38 @@ const AuthPage = () => {
       });
     } else {
       setOtpSent(true);
-      if (authView === "login") actionDesc = "Login link sent! Check your email (including spam).";
-      else if (authView === "signup") actionDesc = "Signup complete! Check your email for the login link.";
-      else actionDesc = "Reset link sent! Check your email for OTP/magic link.";
       toast({
         variant: "default",
         title: "OTP Sent",
-        description: actionDesc,
+        description: authView === "reset"
+          ? "Password reset email sent! Check your inbox."
+          : "OTP/magic link sent! Please check your email.",
       });
     }
   };
 
-  // Change state for signup/login/reset
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setOtpSent(false);
     setError(null);
   };
 
-  // UI
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <form onSubmit={handleOtpAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
-        {/* Home navigation */}
-        <div className="flex justify-between">
-          <a href="/" className="text-primary text-xs underline">Home</a>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      {/* Home link only */}
+      <div className="w-full max-w-md text-left p-3">
+        <a href="/" className="text-primary underline font-medium text-sm">← Home</a>
+      </div>
+      <form
+        onSubmit={handleOtpAuth}
+        className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border"
+      >
         <h1 className="font-bold text-2xl text-center">
-          {authView === "login" ? "Sign In with OTP" : authView === "signup" ? "Sign Up with OTP" : "Reset Password via OTP"}
+          {{
+            login: "Sign In with OTP",
+            signup: "Sign Up with OTP",
+            reset: "Reset Password via OTP"
+          }[authView]}
         </h1>
         <div>
           <Label htmlFor="email">Email</Label>
@@ -103,6 +111,7 @@ const AuthPage = () => {
             placeholder="email@company.com"
             required
             className="mt-1"
+            disabled={otpSent}
           />
         </div>
         {error && <div className="text-red-600 text-sm">{error}</div>}
@@ -110,8 +119,8 @@ const AuthPage = () => {
         {otpSent && (
           <div className="text-green-600 text-center text-sm">
             {authView === "reset"
-              ? "Reset link sent! Check your inbox for the OTP/magic link."
-              : "OTP/magic link sent! Check your inbox to complete the login."}
+              ? "Reset email sent! Check your inbox."
+              : "OTP/magic link sent! Check your inbox to complete login."}
           </div>
         )}
         {/* Send OTP button */}
@@ -126,7 +135,7 @@ const AuthPage = () => {
                   : "Send Reset OTP"}
           </Button>
         )}
-        {/* Auth view switching for signup/login/reset */}
+        {/* Auth view switching */}
         <div className="text-center text-sm mt-2">
           {!otpSent && (
             <>
@@ -140,7 +149,7 @@ const AuthPage = () => {
                   >
                     Sign up
                   </button>
-                  <br/>
+                  <br />
                   Forgot password?{" "}
                   <button
                     type="button"
@@ -176,17 +185,6 @@ const AuthPage = () => {
             </>
           )}
         </div>
-        {/* Helper info */}
-        {!user && (
-          <div className="text-center text-sm mt-6 text-muted-foreground">
-            <b>Trouble logging in?</b>
-            <div>
-              - Make sure you entered your email correctly.<br/>
-              - Check spam if you don't see your OTP link.<br/>
-              - Try logging out on all devices and clear cookies/localStorage.
-            </div>
-          </div>
-        )}
       </form>
     </div>
   );
