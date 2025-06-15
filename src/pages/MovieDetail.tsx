@@ -1,29 +1,73 @@
-import { useParams, Link } from "react-router-dom";
-import { movies, Movie } from "@/data/movies";
+
+import { useParams } from "react-router-dom";
+import { movies } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Film, Languages, Calendar, User } from "lucide-react";
 import NotFound from "./NotFound";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import UserBookings from "./UserBookings";
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
   const movie = movies.find((m) => m.id === Number(id));
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   if (!movie) {
     return <NotFound />;
   }
 
-  const handleBookClick = () => {
+  const handleBookClick = async () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    // Future booking logic here.
-    alert("Booking functionality coming soon!");
+    setBookingLoading(true);
+    // Check if already booked (active)
+    const { data: existing } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("movie_id", movie.id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (existing) {
+      toast({
+        title: "Already Booked",
+        description: "You have already booked this movie!",
+        variant: "destructive",
+      });
+      setBookingLoading(false);
+      return;
+    }
+    // Insert booking
+    const { error } = await supabase.from("bookings").insert([
+      {
+        user_id: user.id,
+        movie_id: movie.id,
+        status: "active",
+      },
+    ]);
+    setBookingLoading(false);
+    if (error) {
+      toast({
+        title: "Booking Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Booking Success",
+        description: "Your booking was successful!",
+      });
+    }
   };
 
   return (
@@ -56,13 +100,22 @@ const MovieDetail = () => {
             <p className="mt-4 text-muted-foreground flex items-center gap-2"><User size={16} /> Directed by {movie.director}</p>
             
             <div className="mt-8">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={handleBookClick}
-                disabled={loading}
+                disabled={loading || bookingLoading}
               >
-                {user ? "Book Tickets Now" : "Login to Book Tickets"}
+                {user ? (bookingLoading ? "Booking..." : "Book Tickets Now") : "Login to Book Tickets"}
               </Button>
             </div>
+
+            {/* Booking list for this movie, for the current user */}
+            {user && (
+              <div className="mt-10">
+                <UserBookings movieId={movie.id} />
+              </div>
+            )}
           </div>
         </div>
       </div>
