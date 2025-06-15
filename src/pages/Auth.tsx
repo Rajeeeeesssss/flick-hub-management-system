@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
+import { useToast } from "@/hooks/use-toast";
 
 type AuthView = "login" | "signup" | "otp";
 const ADMIN_EMAIL = "rajesh9933123@gmail.com";
@@ -26,6 +26,7 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
+  const { toast } = useToast();
 
   // Redirect logic - wait for auth loading before redirect
   if (!authLoading && user && window.location.pathname === "/auth") {
@@ -59,8 +60,21 @@ const AuthPage = () => {
         }
       });
       setLoading(false);
-      if (error) setError(error.message);
-      else setOtpSent(true);
+      if (error) {
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "OTP Error",
+          description: error.message,
+        });
+      } else {
+        setOtpSent(true);
+        toast({
+          variant: "default",
+          title: "OTP Sent",
+          description: "Magic login link sent to admin email!",
+        });
+      }
       return;
     }
 
@@ -68,11 +82,21 @@ const AuthPage = () => {
       // Validation
       if (!email || !password || !confirmPassword || !fullName || !phone) {
         setError("All fields are required.");
+        toast({
+          variant: "destructive",
+          title: "Signup Error",
+          description: "All fields are required."
+        });
         setLoading(false);
         return;
       }
       if (password !== confirmPassword) {
         setError("Passwords do not match.");
+        toast({
+          variant: "destructive",
+          title: "Signup Error",
+          description: "Passwords do not match."
+        });
         setLoading(false);
         return;
       }
@@ -85,9 +109,20 @@ const AuthPage = () => {
         }
       });
       setLoading(false);
-      if (error) setError(error.message);
-      else {
+      if (error) {
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Signup Error",
+          description: error.message
+        });
+      } else {
         setSignupConfirmation(true);
+        toast({
+          variant: "default",
+          title: "Signup Success",
+          description: "Check your email to verify and complete signup."
+        });
       }
       return;
     }
@@ -95,6 +130,11 @@ const AuthPage = () => {
     if (authView === "login") {
       if (!email || !password) {
         setError("Email and password are required.");
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: "Email and password are required."
+        });
         setLoading(false);
         return;
       }
@@ -103,8 +143,19 @@ const AuthPage = () => {
         password,
       });
       setLoading(false);
-      if (error) setError(error.message);
-      else {
+      if (error) {
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: error.message,
+        });
+      } else {
+        toast({
+          variant: "default",
+          title: "Login Success",
+          description: "Logged in! Redirecting...",
+        });
         window.location.href = "/";
       }
     }
