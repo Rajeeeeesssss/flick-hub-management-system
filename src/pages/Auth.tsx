@@ -10,7 +10,6 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 
 type AuthView = "login" | "signup" | "otp";
-
 const ADMIN_EMAIL = "rajesh9933123@gmail.com";
 
 const AuthPage = () => {
@@ -28,7 +27,7 @@ const AuthPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
 
-  // Only redirect once auth/user & admin loading are BOTH complete
+  // Redirect logic - wait for auth loading before redirect
   if (!authLoading && user && window.location.pathname === "/auth") {
     setTimeout(() => navigate("/"), 100);
     return (
@@ -51,13 +50,13 @@ const AuthPage = () => {
     }
 
     // Admin OTP login
-    if (email === ADMIN_EMAIL && authView === "otp") {
+    if (authView === "otp" && email === ADMIN_EMAIL) {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth`,
-        },
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
       });
       setLoading(false);
       if (error) setError(error.message);
@@ -111,29 +110,29 @@ const AuthPage = () => {
     }
   };
 
-  // Detect email field for switching to OTP view for admin email
+  // Manual login mode switching logic
+  // Don't force OTP/login on admin email input
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setEmail(value);
+    setEmail(e.target.value);
+    setOtpSent(false);
     setError(null);
-    if (value === ADMIN_EMAIL) {
-      setAuthView("otp");
-    } else {
-      setAuthView("login");
-    }
+    // Don't force switch between views; user can pick
   };
+
+  // Manual login mode switch UI when admin email is detected
+  const showAdminOptions = email === ADMIN_EMAIL;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
         <h1 className="font-bold text-2xl text-center">
-          {email === ADMIN_EMAIL
+          {authView === "otp"
             ? "Admin: OTP Login"
             : authView === "login"
             ? "Sign In"
             : "Sign Up"}
         </h1>
-        {/* New fields for signup view */}
+        {/* New fields for signup */}
         {(authView === "signup") && (
           <>
             <div>
@@ -176,8 +175,31 @@ const AuthPage = () => {
             className="mt-1"
           />
         </div>
-        {/* For non-admin: password fields */}
-        {(authView === "login" && email !== ADMIN_EMAIL) && (
+
+        {/* Admin login options when admin email is entered */}
+        {showAdminOptions && (
+          <div className="flex gap-2 mt-2 mb-2 justify-center">
+            <Button
+              type="button"
+              size="sm"
+              variant={authView === "login" ? "default" : "outline"}
+              onClick={() => { setAuthView("login"); setOtpSent(false); setError(null);} }
+            >
+              Login with Password
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={authView === "otp" ? "default" : "outline"}
+              onClick={() => { setAuthView("otp"); setOtpSent(false); setError(null);} }
+            >
+              Login with OTP
+            </Button>
+          </div>
+        )}
+
+        {/* For non-admin or for admin in login mode: password fields */}
+        {(authView === "login" && (!showAdminOptions || (showAdminOptions && authView==="login"))) && (
           <div>
             <Label htmlFor="password">Password</Label>
             <Input
@@ -222,17 +244,19 @@ const AuthPage = () => {
             </div>
           </>
         )}
+
         {error && <div className="text-red-600 text-sm">{error}</div>}
 
         {/* Show confirmation on successful signup */}
         {signupConfirmation && (
           <div className="text-green-600 text-center text-sm">
-            A verification email has been sent. <br />
+            A verification email has been sent.<br />
             Please check your inbox and click the confirmation link to verify your email.
           </div>
         )}
 
-        {email === ADMIN_EMAIL && authView === "otp" && (
+        {/* Admin OTP button or status */}
+        {authView === "otp" && showAdminOptions && (
           otpSent ? (
             <div className="text-green-600 text-sm">
               OTP link sent! Check admin email to continue and login as admin.
@@ -244,14 +268,17 @@ const AuthPage = () => {
           )
         )}
 
-        {(email !== ADMIN_EMAIL || authView !== "otp") && !signupConfirmation && (
+        {/* Regular login/signup button */}
+        {(authView !== "otp" || !showAdminOptions) && !signupConfirmation && (
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
           </Button>
         )}
 
+        {/* Auth view switching for signup/login */}
         <div className="text-center text-sm mt-2">
-          {(email !== ADMIN_EMAIL || authView !== "otp") && !signupConfirmation && (
+          {/* Only show switch for non-otp, non-admin modes */}
+          {(!showAdminOptions || authView !== "otp") && !signupConfirmation && (
             <>
               {authView === "login" ? (
                 <>
@@ -280,7 +307,7 @@ const AuthPage = () => {
           )}
         </div>
         {/* Admin role warning for admin login */}
-        {email === ADMIN_EMAIL && user && !loadingAdminRole && !isAdmin && (
+        {showAdminOptions && user && !loadingAdminRole && !isAdmin && (
           <div className="bg-yellow-100 border text-yellow-900 px-3 py-2 rounded text-sm mt-2">
             <b>Admin role not yet granted!</b><br />
             Please contact support or use Supabase dashboard to manually assign the "admin" role to your account.
