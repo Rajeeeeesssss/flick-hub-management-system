@@ -9,7 +9,7 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 import { useToast } from "@/hooks/use-toast";
 
-type AuthView = "login" | "signup" | "otp";
+type AuthView = "login" | "signup";
 const ADMIN_EMAIL = "rajesh9933123@gmail.com";
 
 const AuthPage = () => {
@@ -48,34 +48,6 @@ const AuthPage = () => {
       await supabase.auth.signOut({ scope: "global" });
     } catch {
       // Ignore
-    }
-
-    // Admin OTP login
-    if (authView === "otp" && email === ADMIN_EMAIL) {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth`
-        }
-      });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "OTP Error",
-          description: error.message,
-        });
-      } else {
-        setOtpSent(true);
-        toast({
-          variant: "default",
-          title: "OTP Sent",
-          description: "Magic login link sent to admin email!",
-        });
-      }
-      return;
     }
 
     if (authView === "signup") {
@@ -161,31 +133,25 @@ const AuthPage = () => {
     }
   };
 
-  // Manual login mode switching logic
-  // Don't force OTP/login on admin email input
+  // Manual login mode switching logic, simplified: NO admin login here
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setOtpSent(false);
     setError(null);
-    // Don't force switch between views; user can pick
   };
 
-  // Manual login mode switch UI when admin email is detected
-  const showAdminOptions = email === ADMIN_EMAIL;
+  // Do not show admin login options here
+  // Only show normal user login/signup UI
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
-        {/* Home navigation added */}
+        {/* Home navigation */}
         <div className="flex justify-end">
           <a href="/" className="text-primary text-xs underline">Back to Home</a>
         </div>
         <h1 className="font-bold text-2xl text-center">
-          {authView === "otp"
-            ? "Admin: OTP Login"
-            : authView === "login"
-            ? "Sign In"
-            : "Sign Up"}
+          {authView === "login" ? "Sign In" : "Sign Up"}
         </h1>
         {/* New fields for signup */}
         {(authView === "signup") && (
@@ -231,30 +197,8 @@ const AuthPage = () => {
           />
         </div>
 
-        {/* Admin login options when admin email is entered */}
-        {showAdminOptions && (
-          <div className="flex gap-2 mt-2 mb-2 justify-center">
-            <Button
-              type="button"
-              size="sm"
-              variant={authView === "login" ? "default" : "outline"}
-              onClick={() => { setAuthView("login"); setOtpSent(false); setError(null);} }
-            >
-              Login with Password
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={authView === "otp" ? "default" : "outline"}
-              onClick={() => { setAuthView("otp"); setOtpSent(false); setError(null);} }
-            >
-              Login with OTP
-            </Button>
-          </div>
-        )}
-
-        {/* For non-admin or for admin in login mode: password fields */}
-        {(authView === "login" && (!showAdminOptions || (showAdminOptions && authView==="login"))) && (
+        {/* Password fields */}
+        {(authView === "login") && (
           <div>
             <Label htmlFor="password">Password</Label>
             <Input
@@ -310,21 +254,8 @@ const AuthPage = () => {
           </div>
         )}
 
-        {/* Admin OTP button or status */}
-        {authView === "otp" && showAdminOptions && (
-          otpSent ? (
-            <div className="text-green-600 text-sm">
-              OTP link sent! Check admin email to continue and login as admin.
-            </div>
-          ) : (
-            <Button type="submit" className="w-full" disabled={loading || signupConfirmation}>
-              {loading ? "Please wait..." : "Send OTP to Admin Email"}
-            </Button>
-          )
-        )}
-
         {/* Regular login/signup button */}
-        {(authView !== "otp" || !showAdminOptions) && !signupConfirmation && (
+        {!signupConfirmation && (
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
           </Button>
@@ -332,8 +263,7 @@ const AuthPage = () => {
 
         {/* Auth view switching for signup/login */}
         <div className="text-center text-sm mt-2">
-          {/* Only show switch for non-otp, non-admin modes */}
-          {(!showAdminOptions || authView !== "otp") && !signupConfirmation && (
+          {!signupConfirmation && (
             <>
               {authView === "login" ? (
                 <>
@@ -361,7 +291,13 @@ const AuthPage = () => {
             </>
           )}
         </div>
-        {/* Helper debug info if user is stuck */}
+        <div className="text-center text-xs mt-4">
+          <a
+            href="/admin-login"
+            className="text-primary underline"
+          >Go to Admin Login</a>
+        </div>
+        {/* Helper info */}
         {!user && (
           <div className="text-center text-sm mt-6 text-muted-foreground">
             <b>Trouble logging in?</b>
@@ -370,13 +306,6 @@ const AuthPage = () => {
               - If you just signed up, check for a verification mail.<br/>
               - If you can't log in, try logging out on all devices and clear cookies/localStorage.
             </div>
-          </div>
-        )}
-        {/* Admin role warning for admin login */}
-        {showAdminOptions && user && !loadingAdminRole && !isAdmin && (
-          <div className="bg-yellow-100 border text-yellow-900 px-3 py-2 rounded text-sm mt-2">
-            <b>Admin role not yet granted!</b><br />
-            Please contact support or use Supabase dashboard to manually assign the "admin" role to your account.
           </div>
         )}
       </form>
