@@ -38,7 +38,7 @@ const LANGUAGES = [
 export interface BookTicketDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onConfirm: (seat: string, showTime: string, language: string) => Promise<void>;
+  onConfirm: (seats: string[], showTime: string, language: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -48,19 +48,28 @@ export default function BookTicketDialog({
   onConfirm,
   loading,
 }: BookTicketDialogProps) {
-  const [seat, setSeat] = useState(SEAT_NUMBERS[0]);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([SEAT_NUMBERS[0]]);
   const [showTime, setShowTime] = useState(SHOW_TIMES[0].value);
   const [language, setLanguage] = useState(LANGUAGES[0].value);
 
+  const toggleSeat = (seatId: string) => {
+    setSelectedSeats((prev) =>
+      prev.includes(seatId)
+        ? prev.filter((s) => s !== seatId)
+        : [...prev, seatId]
+    );
+  };
+
   const handleConfirm = async () => {
-    await onConfirm(seat, showTime, language);
+    if (selectedSeats.length === 0) return;
+    await onConfirm(selectedSeats, showTime, language);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Select Seat, Show Time & Language</DialogTitle>
+          <DialogTitle>Select Seats, Show Time & Language</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-5">
           {/* Show Time */}
@@ -79,12 +88,13 @@ export default function BookTicketDialog({
           </div>
           {/* Seat Grid */}
           <div>
-            <label className="font-semibold block mb-2">Select your seat</label>
+            <label className="font-semibold block mb-2">Select your seats</label>
             <div className="flex flex-col items-center gap-2">
-              {ROW_LETTERS.map((row, rowIdx) => (
+              {ROW_LETTERS.map((row) => (
                 <div key={row} className="flex gap-2">
                   {COL_NUMBERS.map((col) => {
                     const seatId = `${row}${col}`;
+                    const isSelected = selectedSeats.includes(seatId);
                     return (
                       <button
                         key={seatId}
@@ -92,11 +102,11 @@ export default function BookTicketDialog({
                         disabled={loading}
                         className={clsx(
                           "w-10 h-10 border rounded-md flex items-center justify-center transition-colors",
-                          seat === seatId
+                          isSelected
                             ? "bg-primary text-primary-foreground font-bold shadow"
                             : "bg-background hover:bg-accent"
                         )}
-                        onClick={() => setSeat(seatId)}
+                        onClick={() => toggleSeat(seatId)}
                         aria-label={`Seat ${seatId}`}
                       >
                         {seatId}
@@ -105,7 +115,10 @@ export default function BookTicketDialog({
                   })}
                 </div>
               ))}
-              <div className="text-xs text-muted-foreground mt-2">Click a seat to select</div>
+              <div className="text-xs text-muted-foreground mt-2">Click a seat to select/unselect. Multiple seats allowed.</div>
+            </div>
+            <div className="text-xs mt-1">
+              Selected: <span className="font-semibold">{selectedSeats.join(", ")}</span>
             </div>
           </div>
           {/* Language Picker */}
@@ -124,8 +137,8 @@ export default function BookTicketDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleConfirm} disabled={loading}>
-            {loading ? "Booking..." : "Confirm Booking"}
+          <Button onClick={handleConfirm} disabled={loading || selectedSeats.length === 0}>
+            {loading ? "Booking..." : `Confirm (${selectedSeats.length} Ticket${selectedSeats.length > 1 ? 's' : ''})`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -51,6 +51,7 @@ const AdminPage = () => {
     }
   }, [user, loading, isAdmin, loadingAdminRole, navigate]);
 
+  // Fix: Only allow admin access when isAdmin === true
   if (loading || loadingAdminRole) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -103,7 +104,24 @@ const AdminPage = () => {
     );
   }
 
-  if (isAdmin === false) {
+  if (adminRoleError) {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-6">
+        <div className="p-8 rounded bg-red-100 border border-red-300 shadow">
+          <h2 className="text-xl font-bold text-red-900 mb-2">
+            Error Checking Admin Role
+          </h2>
+          <p className="text-red-800">{String(adminRoleError)}</p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCcw className="mr-2 h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Only render admin UI if isAdmin is true
+  if (isAdmin !== true) {
     debugMessage =
       "You do not have the admin role assigned. This is required for dashboard access.";
     action = (
@@ -146,22 +164,6 @@ const AdminPage = () => {
             </div>
           </div>
           {action}
-        </div>
-      </div>
-    );
-  }
-
-  if (adminRoleError) {
-    return (
-      <div className="flex h-screen items-center justify-center flex-col gap-6">
-        <div className="p-8 rounded bg-red-100 border border-red-300 shadow">
-          <h2 className="text-xl font-bold text-red-900 mb-2">
-            Error Checking Admin Role
-          </h2>
-          <p className="text-red-800">{String(adminRoleError)}</p>
-          <Button onClick={() => window.location.reload()}>
-            <RefreshCcw className="mr-2 h-4 w-4" /> Retry
-          </Button>
         </div>
       </div>
     );

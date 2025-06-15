@@ -34,40 +34,47 @@ const MovieDetail = () => {
   };
 
   // Add language option to booking
-  const handleBookConfirm = async (seat: string, showTime: string, language: string) => {
+  const handleBookConfirm = async (seats: string[], showTime: string, language: string) => {
     setBookingLoading(true);
-    // Check if already booked (active)
+    const errors: string[] = [];
+    // Calculate show time date
+    const today = new Date();
+    const [hour, min] = showTime.split(":");
+    const showDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hour), parseInt(min), 0);
+
+    // Prepare batch insert for all selected seats
+    const inserts = seats.map(seat => ({
+      user_id: user.id,
+      movie_id: movie.id,
+      seat_number: seat,
+      show_time: showDate.toISOString(),
+      status: "active",
+      language: language,
+    }));
+
+    // Check if user has any existing active bookings for this movie & show time & seat
+    // (for simplicity, just prevent user from booking same seat for same movie/show_time!)
+    // You may want to add more constraints later
     const { data: existing } = await supabase
       .from("bookings")
       .select("*")
       .eq("user_id", user.id)
       .eq("movie_id", movie.id)
       .eq("status", "active")
-      .maybeSingle();
-    if (existing) {
+      .eq("show_time", showDate.toISOString());
+
+    if (existing && existing.some(b => seats.includes(b.seat_number))) {
       toast({
-        title: "Already Booked",
-        description: "You have already booked this movie!",
+        title: "Seat already booked",
+        description: "You already booked one or more of the selected seats at this time!",
         variant: "destructive",
       });
       setBookingLoading(false);
       setDialogOpen(false);
       return;
     }
-    // Calculate full show time (today's date + selected time)
-    const today = new Date();
-    const [hour, min] = showTime.split(":");
-    const showDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hour), parseInt(min), 0);
-    const { error } = await supabase.from("bookings").insert([
-      {
-        user_id: user.id,
-        movie_id: movie.id,
-        seat_number: seat,
-        show_time: showDate.toISOString(),
-        status: "active",
-        language: language, // For future extension, not in table yet
-      },
-    ]);
+
+    const { error } = await supabase.from("bookings").insert(inserts);
     setBookingLoading(false);
     setDialogOpen(false);
     if (error) {
@@ -79,7 +86,7 @@ const MovieDetail = () => {
     } else {
       toast({
         title: "Booking Success",
-        description: "Your booking was successful!",
+        description: `Booked ${seats.length} ticket${seats.length > 1 ? 's' : ''}!`,
       });
     }
   };
