@@ -53,8 +53,6 @@ const MovieDetail = () => {
     }));
 
     // Check if user has any existing active bookings for this movie & show time & seat
-    // (for simplicity, just prevent user from booking same seat for same movie/show_time!)
-    // You may want to add more constraints later
     const { data: existing } = await supabase
       .from("bookings")
       .select("*")
@@ -77,6 +75,8 @@ const MovieDetail = () => {
     const { error } = await supabase.from("bookings").insert(inserts);
     setBookingLoading(false);
     setDialogOpen(false);
+    const navigate = useNavigate(); // move hook up if not already present
+
     if (error) {
       toast({
         title: "Booking Failed",
@@ -84,10 +84,8 @@ const MovieDetail = () => {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Booking Success",
-        description: `Booked ${seats.length} ticket${seats.length > 1 ? 's' : ''}!`,
-      });
+      // Instead of just toasting, redirect to payment dummy page
+      navigate("/payment-dummy");
     }
   };
 
