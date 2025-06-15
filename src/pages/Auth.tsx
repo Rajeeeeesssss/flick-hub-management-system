@@ -16,11 +16,14 @@ const ADMIN_EMAIL = "rajesh9933123@gmail.com";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [authView, setAuthView] = useState<AuthView>("login");
   const [error, setError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
+  const [signupConfirmation, setSignupConfirmation] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
@@ -40,15 +43,14 @@ const AuthPage = () => {
     setError(null);
     setLoading(true);
 
-    // Clean up ALL stale login/session data before logging in/out
     cleanupAuthState();
     try {
       await supabase.auth.signOut({ scope: "global" });
-    } catch (err) {
-      // Ignore error on logout
+    } catch {
+      // Ignore
     }
 
-    // Admin: use OTP "magic link" flow
+    // Admin OTP login
     if (email === ADMIN_EMAIL && authView === "otp") {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -64,23 +66,39 @@ const AuthPage = () => {
     }
 
     if (authView === "signup") {
-      // Customer signup flow
+      // Validation
+      if (!email || !password || !confirmPassword || !fullName || !phone) {
+        setError("All fields are required.");
+        setLoading(false);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: { full_name: fullName }
+          emailRedirectTo: `${window.location.origin}/auth`,
+          data: { full_name: fullName, phone },
         }
       });
       setLoading(false);
       if (error) setError(error.message);
-      else alert("Check your email to confirm your registration!");
+      else {
+        setSignupConfirmation(true);
+      }
       return;
     }
 
     if (authView === "login") {
-      // Normal customer login
+      if (!email || !password) {
+        setError("Email and password are required.");
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -115,20 +133,36 @@ const AuthPage = () => {
             ? "Sign In"
             : "Sign Up"}
         </h1>
+        {/* New fields for signup view */}
         {(authView === "signup") && (
-          <div>
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Enter your full name"
-              required
-              className="mt-1"
-            />
-          </div>
+          <>
+            <div>
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your phone number"
+                required
+                className="mt-1"
+              />
+            </div>
+          </>
         )}
+        {/* All views: email input */}
         <div>
           <Label htmlFor="email">Email</Label>
           <Input
@@ -142,7 +176,7 @@ const AuthPage = () => {
             className="mt-1"
           />
         </div>
-        {/* Show password for non-admin */}
+        {/* For non-admin: password fields */}
         {(authView === "login" && email !== ADMIN_EMAIL) && (
           <div>
             <Label htmlFor="password">Password</Label>
@@ -158,28 +192,66 @@ const AuthPage = () => {
             />
           </div>
         )}
+        {(authView === "signup") && (
+          <>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+                required
+                className="mt-1"
+              />
+            </div>
+          </>
+        )}
         {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        {/* Show confirmation on successful signup */}
+        {signupConfirmation && (
+          <div className="text-green-600 text-center text-sm">
+            A verification email has been sent. <br />
+            Please check your inbox and click the confirmation link to verify your email.
+          </div>
+        )}
 
         {email === ADMIN_EMAIL && authView === "otp" && (
           otpSent ? (
             <div className="text-green-600 text-sm">
-              OTP link sent! Check email to continue and login as admin.
+              OTP link sent! Check admin email to continue and login as admin.
             </div>
           ) : (
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || signupConfirmation}>
               {loading ? "Please wait..." : "Send OTP to Admin Email"}
             </Button>
           )
         )}
 
-        {(email !== ADMIN_EMAIL || authView !== "otp") && (
+        {(email !== ADMIN_EMAIL || authView !== "otp") && !signupConfirmation && (
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
           </Button>
         )}
 
         <div className="text-center text-sm mt-2">
-          {(email !== ADMIN_EMAIL || authView !== "otp") && (
+          {(email !== ADMIN_EMAIL || authView !== "otp") && !signupConfirmation && (
             <>
               {authView === "login" ? (
                 <>
@@ -207,8 +279,7 @@ const AuthPage = () => {
             </>
           )}
         </div>
-
-        {/* Admin role warning */}
+        {/* Admin role warning for admin login */}
         {email === ADMIN_EMAIL && user && !loadingAdminRole && !isAdmin && (
           <div className="bg-yellow-100 border text-yellow-900 px-3 py-2 rounded text-sm mt-2">
             <b>Admin role not yet granted!</b><br />

@@ -29,18 +29,37 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useNavigate } from "react-router-dom";
 
+// Utility to check if email is confirmed
+function isEmailConfirmed(user: any) {
+  // For Supabase v2, user?.email_confirmed_at is filled or user?.confirmed_at
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
+
 const AdminPage = () => {
   const { user, loading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
   const navigate = useNavigate();
 
-  // Improved robust admin protection
   if (loading || loadingAdminRole) {
     return <div className="flex h-screen items-center justify-center"><span>Loading...</span></div>;
   }
   if (!user) {
     setTimeout(() => navigate("/auth"), 100);
     return <div className="flex h-screen items-center justify-center">Redirecting to login...</div>;
+  }
+  // Require email verification before access to Admin
+  if (!isEmailConfirmed(user)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-yellow-50">
+        <div className="bg-yellow-100 border border-yellow-300 p-8 rounded shadow">
+          <h2 className="text-xl font-bold mb-2 text-yellow-800">Email Verification Required</h2>
+          <p className="mb-4 text-yellow-800">
+            Please check your email inbox and click the confirmation link we sent you.
+          </p>
+          <p className="text-yellow-700 text-sm">If you don't see the email, check your spam folder or try logging out and in again to resend the link.</p>
+        </div>
+      </div>
+    );
   }
   if (isAdmin === false) {
     setTimeout(() => navigate("/auth"), 100);
