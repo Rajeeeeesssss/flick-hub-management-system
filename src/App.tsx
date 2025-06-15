@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import MovieDetail from "./pages/MovieDetail";
+import AdminPage from "./pages/Admin";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/movie/:id" element={<MovieDetail />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -17,6 +17,12 @@ const Header = () => {
           >
             Movies
           </Link>
+          <Link
+            to="/admin"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
+            Admin
+          </Link>
         </nav>
       </div>
     </header>
