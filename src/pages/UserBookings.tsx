@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +10,8 @@ type Booking = {
   status: string;
   created_at: string;
   cancelled_at: string | null;
+  show_time: string;
+  seat_number: string;
 };
 
 const UserBookings = ({ movieId }: { movieId: number }) => {
@@ -65,19 +66,13 @@ const UserBookings = ({ movieId }: { movieId: number }) => {
     <div className="text-muted-foreground text-sm">No booking for this movie yet.</div>
   );
 
-  if (booking.status === "cancelled") {
-    return (
-      <div className="text-orange-600 text-sm">
-        You cancelled this booking on {booking.cancelled_at ? new Date(booking.cancelled_at).toLocaleString() : "unknown"}.
-      </div>
-    );
-  }
-
-  // If booking is active
   return (
     <div className="flex flex-col gap-2">
       <div className="text-green-700 text-sm">
         Booking active since {new Date(booking.created_at).toLocaleString()}.
+        <br />
+        <span className="font-semibold">Show time:</span> {new Date(booking.show_time).toLocaleString()}<br />
+        <span className="font-semibold">Seat:</span> {booking.seat_number}
       </div>
       <Button
         variant="destructive"

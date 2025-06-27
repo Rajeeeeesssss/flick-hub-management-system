@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { movies } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import UserBookings from "./UserBookings";
+import BookTicketDialog from "@/components/BookTicketDialog";
+
+const TICKET_PRICE = 8; // $8 per ticket
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,56 +20,40 @@ const MovieDetail = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<{
+    seats: string[];
+    showTime: string;
+    language: string;
+    totalPrice: number;
+  } | null>(null);
 
   if (!movie) {
     return <NotFound />;
   }
 
-  const handleBookClick = async () => {
+  const handleBookClick = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    setBookingLoading(true);
-    // Check if already booked (active)
-    const { data: existing } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("movie_id", movie.id)
-      .eq("status", "active")
-      .maybeSingle();
-    if (existing) {
-      toast({
-        title: "Already Booked",
-        description: "You have already booked this movie!",
-        variant: "destructive",
-      });
-      setBookingLoading(false);
-      return;
-    }
-    // Insert booking
-    const { error } = await supabase.from("bookings").insert([
-      {
-        user_id: user.id,
-        movie_id: movie.id,
-        status: "active",
-      },
-    ]);
-    setBookingLoading(false);
-    if (error) {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Booking Success",
-        description: "Your booking was successful!",
-      });
-    }
+    setDialogOpen(true);
+  };
+
+  // Show the BookTicketDialog and after confirm, send booking data to PaymentDummy (no DB writes yet)
+  const handleBookConfirm = (seats: string[], showTime: string, language: string, totalPrice: number) => {
+    setDialogOpen(false);
+    setPendingBooking({ seats, showTime, language, totalPrice });
+    navigate("/payment-dummy", {
+      state: {
+        movieId: movie.id,
+        seats,
+        showTime,
+        language,
+        totalPrice,
+      }
+    });
   };
 
   return (
@@ -106,8 +92,14 @@ const MovieDetail = () => {
                 onClick={handleBookClick}
                 disabled={loading || bookingLoading}
               >
-                {user ? (bookingLoading ? "Booking..." : "Book Tickets Now") : "Login to Book Tickets"}
+                {user ? "Book Tickets Now" : "Login to Book Tickets"}
               </Button>
+              <BookTicketDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                onConfirm={handleBookConfirm}
+                loading={bookingLoading}
+              />
             </div>
 
             {/* Booking list for this movie, for the current user */}

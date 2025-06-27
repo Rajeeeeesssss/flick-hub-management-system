@@ -1,34 +1,39 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useAdminRole } from "@/hooks/useAdminRole";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 import { useToast } from "@/hooks/use-toast";
+import AuthLoginForm from "./AuthLoginForm";
+import AuthRegisterForm from "./AuthRegisterForm";
 
-type AuthView = "login" | "signup" | "otp";
-const ADMIN_EMAIL = "rajesh9933123@gmail.com";
+type AuthView = "login" | "register";
 
+/**
+ * Email/password authentication page for login and signup.
+ */
 const AuthPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [error, setError] = useState<string | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
-  const [signupConfirmation, setSignupConfirmation] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<string | null>(null);
+
+  // Register fields
+  const [registerName, setRegisterName] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirm, setRegisterConfirm] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+
+  // Login fields
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { data: isAdmin, isLoading: loadingAdminRole } = useAdminRole(user?.id);
   const { toast } = useToast();
 
-  // Redirect logic - wait for auth loading before redirect
+  // Redirect to homepage if already logged in
   if (!authLoading && user && window.location.pathname === "/auth") {
     setTimeout(() => navigate("/"), 100);
     return (
@@ -38,348 +43,217 @@ const AuthPage = () => {
     );
   }
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setRegisterName("");
+    setRegisterEmail("");
+    setRegisterPassword("");
+    setRegisterConfirm("");
+    setLoginEmail("");
+    setLoginPassword("");
+    setErrors(null);
+    setRegisterSuccess(false);
+  };
+
+  // Register a new user
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrors(null);
+    setRegisterSuccess(false);
+
+    if (!registerName.trim()) {
+      setErrors("Name is required.");
+      return;
+    }
+    if (!registerEmail.trim()) {
+      setErrors("Email is required.");
+      return;
+    }
+    if (!registerPassword) {
+      setErrors("Password is required.");
+      return;
+    }
+    if (registerPassword !== registerConfirm) {
+      setErrors("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+
+    cleanupAuthState();
+    try {
+      // Sign up and set the meta data for full_name only.
+      const { data, error } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+        options: {
+          emailRedirectTo: window.location.origin + "/auth",
+          data: {
+            full_name: registerName,
+          },
+        },
+      });
+
+      if (error) {
+        setErrors(error.message || "Registration failed");
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Sign Up Failed",
+          description: error.message,
+        });
+        return;
+      }
+
+      // Upsert the user's profile with full_name only
+      if (data.user) {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          full_name: registerName,
+        });
+      }
+
+      setLoading(false);
+      setRegisterSuccess(true);
+      toast({
+        variant: "default",
+        title: "Sign Up Successful!",
+        description:
+          "Your account has been created. Please check your email to confirm and then log in.",
+      });
+      setTimeout(() => setAuthView("login"), 1800);
+    } catch (err: any) {
+      setErrors("Registration failed. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  // Log in with email / password
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors(null);
+
+    if (!loginEmail || !loginPassword) {
+      setErrors("Please enter your email and password.");
+      return;
+    }
     setLoading(true);
 
     cleanupAuthState();
     try {
       await supabase.auth.signOut({ scope: "global" });
-    } catch {
-      // Ignore
-    }
+    } catch {}
 
-    // Admin OTP login
-    if (authView === "otp" && email === ADMIN_EMAIL) {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth`
-        }
-      });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "OTP Error",
-          description: error.message,
-        });
-      } else {
-        setOtpSent(true);
-        toast({
-          variant: "default",
-          title: "OTP Sent",
-          description: "Magic login link sent to admin email!",
-        });
-      }
-      return;
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
 
-    if (authView === "signup") {
-      // Validation
-      if (!email || !password || !confirmPassword || !fullName || !phone) {
-        setError("All fields are required.");
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: "All fields are required."
-        });
-        setLoading(false);
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: "Passwords do not match."
-        });
-        setLoading(false);
-        return;
-      }
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
-          data: { full_name: fullName, phone },
-        }
-      });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "Signup Error",
-          description: error.message
-        });
-      } else {
-        setSignupConfirmation(true);
-        toast({
-          variant: "default",
-          title: "Signup Success",
-          description: "Check your email to verify and complete signup."
-        });
-      }
-      return;
-    }
+    setLoading(false);
 
-    if (authView === "login") {
-      if (!email || !password) {
-        setError("Email and password are required.");
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: "Email and password are required."
-        });
-        setLoading(false);
-        return;
-      }
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    if (error) {
+      setErrors(error.message || "Login failed");
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message,
       });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: error.message,
-        });
-      } else {
-        toast({
-          variant: "default",
-          title: "Login Success",
-          description: "Logged in! Redirecting...",
-        });
-        window.location.href = "/";
-      }
+    } else if (data.user) {
+      toast({
+        variant: "default",
+        title: "Logged In",
+        description: "You are now logged in!",
+      });
+      // Force refresh/redirect to home
+      window.location.href = "/";
     }
   };
 
-  // Manual login mode switching logic
-  // Don't force OTP/login on admin email input
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    setOtpSent(false);
-    setError(null);
-    // Don't force switch between views; user can pick
+  // Field change handlers for subcomponents
+  const handleLoginInput = (type: "email" | "password", val: string) => {
+    if (type === "email") setLoginEmail(val);
+    else setLoginPassword(val);
   };
 
-  // Manual login mode switch UI when admin email is detected
-  const showAdminOptions = email === ADMIN_EMAIL;
+  const handleRegisterInput = (
+    type: "name" | "email" | "password" | "confirm",
+    val: string
+  ) => {
+    if (type === "name") setRegisterName(val);
+    else if (type === "email") setRegisterEmail(val);
+    else if (type === "password") setRegisterPassword(val);
+    else setRegisterConfirm(val);
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <form onSubmit={handleAuth} className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full space-y-6 border">
-        {/* Home navigation added */}
-        <div className="flex justify-end">
-          <a href="/" className="text-primary text-xs underline">Back to Home</a>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      {/* Home link only */}
+      <div className="w-full max-w-md text-left p-3">
+        <a href="/" className="text-primary underline font-medium text-sm">
+          ← Home
+        </a>
+      </div>
+      <div className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full border">
+        {/* Auth toggle */}
+        <div className="flex mb-6">
+          <button
+            className={`flex-1 py-2 rounded-md font-semibold ${
+              authView === "login"
+                ? "bg-primary text-white"
+                : "bg-muted text-muted-foreground"
+            } transition-colors`}
+            onClick={() => {
+              setAuthView("login");
+              resetForm();
+            }}
+            disabled={authView === "login"}
+          >
+            Login
+          </button>
+          <button
+            className={`flex-1 py-2 rounded-md font-semibold ${
+              authView === "register"
+                ? "bg-primary text-white"
+                : "bg-muted text-muted-foreground"
+            } transition-colors ml-2`}
+            onClick={() => {
+              setAuthView("register");
+              resetForm();
+            }}
+            disabled={authView === "register"}
+          >
+            Register
+          </button>
         </div>
-        <h1 className="font-bold text-2xl text-center">
-          {authView === "otp"
-            ? "Admin: OTP Login"
-            : authView === "login"
-            ? "Sign In"
-            : "Sign Up"}
-        </h1>
-        {/* New fields for signup */}
-        {(authView === "signup") && (
-          <>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Enter your full name"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
-                required
-                className="mt-1"
-              />
-            </div>
-          </>
-        )}
-        {/* All views: email input */}
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={handleEmailChange}
-            placeholder="email@company.com"
-            required
-            className="mt-1"
+        {authView === "login" ? (
+          <AuthLoginForm
+            loading={loading}
+            loginEmail={loginEmail}
+            loginPassword={loginPassword}
+            errors={errors}
+            handleLogin={handleLogin}
+            onInputChange={handleLoginInput}
+            gotoRegister={() => {
+              setAuthView("register");
+              resetForm();
+            }}
           />
-        </div>
-
-        {/* Admin login options when admin email is entered */}
-        {showAdminOptions && (
-          <div className="flex gap-2 mt-2 mb-2 justify-center">
-            <Button
-              type="button"
-              size="sm"
-              variant={authView === "login" ? "default" : "outline"}
-              onClick={() => { setAuthView("login"); setOtpSent(false); setError(null);} }
-            >
-              Login with Password
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={authView === "otp" ? "default" : "outline"}
-              onClick={() => { setAuthView("otp"); setOtpSent(false); setError(null);} }
-            >
-              Login with OTP
-            </Button>
-          </div>
+        ) : (
+          <AuthRegisterForm
+            loading={loading}
+            registerName={registerName}
+            registerEmail={registerEmail}
+            registerPassword={registerPassword}
+            registerConfirm={registerConfirm}
+            errors={errors}
+            registerSuccess={registerSuccess}
+            handleRegister={handleRegister}
+            onInputChange={handleRegisterInput}
+            gotoLogin={() => {
+              setAuthView("login");
+              resetForm();
+            }}
+          />
         )}
-
-        {/* For non-admin or for admin in login mode: password fields */}
-        {(authView === "login" && (!showAdminOptions || (showAdminOptions && authView==="login"))) && (
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              className="mt-1"
-            />
-          </div>
-        )}
-        {(authView === "signup") && (
-          <>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                required
-                className="mt-1"
-              />
-            </div>
-          </>
-        )}
-
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-
-        {/* Show confirmation on successful signup */}
-        {signupConfirmation && (
-          <div className="text-green-600 text-center text-sm">
-            A verification email has been sent.<br />
-            Please check your inbox and click the confirmation link to verify your email.
-          </div>
-        )}
-
-        {/* Admin OTP button or status */}
-        {authView === "otp" && showAdminOptions && (
-          otpSent ? (
-            <div className="text-green-600 text-sm">
-              OTP link sent! Check admin email to continue and login as admin.
-            </div>
-          ) : (
-            <Button type="submit" className="w-full" disabled={loading || signupConfirmation}>
-              {loading ? "Please wait..." : "Send OTP to Admin Email"}
-            </Button>
-          )
-        )}
-
-        {/* Regular login/signup button */}
-        {(authView !== "otp" || !showAdminOptions) && !signupConfirmation && (
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Please wait..." : authView === "login" ? "Login" : "Sign up"}
-          </Button>
-        )}
-
-        {/* Auth view switching for signup/login */}
-        <div className="text-center text-sm mt-2">
-          {/* Only show switch for non-otp, non-admin modes */}
-          {(!showAdminOptions || authView !== "otp") && !signupConfirmation && (
-            <>
-              {authView === "login" ? (
-                <>
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    className="text-primary underline"
-                    onClick={() => setAuthView("signup")}
-                  >
-                    Sign up
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    className="text-primary underline"
-                    onClick={() => setAuthView("login")}
-                  >
-                    Login
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-        {/* Helper debug info if user is stuck */}
-        {!user && (
-          <div className="text-center text-sm mt-6 text-muted-foreground">
-            <b>Trouble logging in?</b>
-            <div>
-              - Make sure your email is confirmed.<br/>
-              - If you just signed up, check for a verification mail.<br/>
-              - If you can't log in, try logging out on all devices and clear cookies/localStorage.
-            </div>
-          </div>
-        )}
-        {/* Admin role warning for admin login */}
-        {showAdminOptions && user && !loadingAdminRole && !isAdmin && (
-          <div className="bg-yellow-100 border text-yellow-900 px-3 py-2 rounded text-sm mt-2">
-            <b>Admin role not yet granted!</b><br />
-            Please contact support or use Supabase dashboard to manually assign the "admin" role to your account.
-          </div>
-        )}
-      </form>
+      </div>
     </div>
   );
 };
