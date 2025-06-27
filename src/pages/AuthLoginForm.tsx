@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -53,19 +54,13 @@ const AuthLoginForm: React.FC<Props> = ({
     <Button type="submit" className="w-full" disabled={loading}>
       {loading ? "Logging in..." : "Login"}
     </Button>
-    <div className="flex flex-col items-center mt-3 gap-2">
+    <div className="text-center mt-3">
       <span
         className="text-primary underline text-xs cursor-pointer"
         onClick={gotoRegister}
       >
         Don't have an account? Register
       </span>
-      <a
-        className="text-xs text-blue-700 underline hover:text-blue-900 cursor-pointer mt-1"
-        href="/otp-login"
-      >
-        Login with Magic Link / OTP
-      </a>
     </div>
   </form>
 );

@@ -104,4 +104,3 @@ const AuthRegisterForm: React.FC<Props> = ({
 );
 
 export default AuthRegisterForm;
-
