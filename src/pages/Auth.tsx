@@ -1,18 +1,20 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cleanupAuthState } from "@/hooks/cleanupAuth";
 import { useToast } from "@/hooks/use-toast";
-import AuthLoginForm from "./AuthLoginForm";
-import AuthRegisterForm from "./AuthRegisterForm";
-
-type AuthView = "login" | "register";
 
 /**
  * Email/password authentication page for login and signup.
  */
+
+type AuthView = "login" | "register";
+
 const AuthPage = () => {
   const [authView, setAuthView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ const AuthPage = () => {
   // Register fields
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirm, setRegisterConfirm] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState(false);
@@ -46,6 +49,7 @@ const AuthPage = () => {
   const resetForm = () => {
     setRegisterName("");
     setRegisterEmail("");
+    setRegisterPhone("");
     setRegisterPassword("");
     setRegisterConfirm("");
     setLoginEmail("");
@@ -68,6 +72,10 @@ const AuthPage = () => {
       setErrors("Email is required.");
       return;
     }
+    if (!registerPhone.trim()) {
+      setErrors("Phone number is required.");
+      return;
+    }
     if (!registerPassword) {
       setErrors("Password is required.");
       return;
@@ -80,14 +88,15 @@ const AuthPage = () => {
 
     cleanupAuthState();
     try {
-      // Sign up and set the meta data for full_name only.
+      // Try to sign up
       const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
         options: {
           emailRedirectTo: window.location.origin + "/auth",
           data: {
-            full_name: registerName,
+            name: registerName,
+            phone: registerPhone,
           },
         },
       });
@@ -103,11 +112,12 @@ const AuthPage = () => {
         return;
       }
 
-      // Upsert the user's profile with full_name only
+      // Now insert a profile to match this user
       if (data.user) {
         await supabase.from("profiles").upsert({
           id: data.user.id,
-          full_name: registerName,
+          name: registerName,
+          phone: registerPhone,
         });
       }
 
@@ -167,22 +177,6 @@ const AuthPage = () => {
     }
   };
 
-  // Field change handlers for subcomponents
-  const handleLoginInput = (type: "email" | "password", val: string) => {
-    if (type === "email") setLoginEmail(val);
-    else setLoginPassword(val);
-  };
-
-  const handleRegisterInput = (
-    type: "name" | "email" | "password" | "confirm",
-    val: string
-  ) => {
-    if (type === "name") setRegisterName(val);
-    else if (type === "email") setRegisterEmail(val);
-    else if (type === "password") setRegisterPassword(val);
-    else setRegisterConfirm(val);
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       {/* Home link only */}
@@ -224,34 +218,131 @@ const AuthPage = () => {
           </button>
         </div>
         {authView === "login" ? (
-          <AuthLoginForm
-            loading={loading}
-            loginEmail={loginEmail}
-            loginPassword={loginPassword}
-            errors={errors}
-            handleLogin={handleLogin}
-            onInputChange={handleLoginInput}
-            gotoRegister={() => {
-              setAuthView("register");
-              resetForm();
-            }}
-          />
+          // Login View
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <Label htmlFor="login_email">Email</Label>
+              <Input
+                id="login_email"
+                type="email"
+                autoComplete="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="you@email.com"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="login_password">Password</Label>
+              <Input
+                id="login_password"
+                type="password"
+                autoComplete="current-password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Your password"
+                required
+                className="mt-1"
+              />
+            </div>
+            {errors && <div className="text-red-600 text-sm">{errors}</div>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </Button>
+            <div className="text-center mt-3">
+              <span
+                className="text-primary underline text-xs cursor-pointer"
+                onClick={() => setAuthView("register")}
+              >
+                Don't have an account? Register
+              </span>
+            </div>
+          </form>
         ) : (
-          <AuthRegisterForm
-            loading={loading}
-            registerName={registerName}
-            registerEmail={registerEmail}
-            registerPassword={registerPassword}
-            registerConfirm={registerConfirm}
-            errors={errors}
-            registerSuccess={registerSuccess}
-            handleRegister={handleRegister}
-            onInputChange={handleRegisterInput}
-            gotoLogin={() => {
-              setAuthView("login");
-              resetForm();
-            }}
-          />
+          // Register View
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div>
+              <Label htmlFor="register_name">Full Name</Label>
+              <Input
+                id="register_name"
+                value={registerName}
+                onChange={(e) => setRegisterName(e.target.value)}
+                placeholder="Your full name"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="register_email">Email</Label>
+              <Input
+                id="register_email"
+                type="email"
+                autoComplete="email"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                placeholder="you@email.com"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="register_phone">Phone Number</Label>
+              <Input
+                id="register_phone"
+                type="tel"
+                autoComplete="tel"
+                value={registerPhone}
+                onChange={(e) => setRegisterPhone(e.target.value)}
+                placeholder="e.g. 9876543210"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="register_password">Password</Label>
+              <Input
+                id="register_password"
+                type="password"
+                autoComplete="new-password"
+                value={registerPassword}
+                onChange={(e) => setRegisterPassword(e.target.value)}
+                placeholder="Choose a password"
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="register_confirm">Confirm Password</Label>
+              <Input
+                id="register_confirm"
+                type="password"
+                autoComplete="off"
+                value={registerConfirm}
+                onChange={(e) => setRegisterConfirm(e.target.value)}
+                placeholder="Confirm your password"
+                required
+                className="mt-1"
+              />
+            </div>
+            {errors && <div className="text-red-600 text-sm">{errors}</div>}
+            {registerSuccess && (
+              <div className="text-green-600 text-center text-sm">
+                Registered successfully! Please check your email, then log in.
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Registering..." : "Register"}
+            </Button>
+            <div className="text-center mt-3">
+              <span
+                className="text-primary underline text-xs cursor-pointer"
+                onClick={() => setAuthView("login")}
+              >
+                Already have an account? Login
+              </span>
+            </div>
+          </form>
         )}
       </div>
     </div>
