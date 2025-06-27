@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +41,7 @@ const Home = () => {
           <p className="text-xl md:text-2xl opacity-90 mb-8 max-w-2xl mx-auto">
             Your ultimate destination for the latest movies and unforgettable cinema experiences
           </p>
-          <MovieSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+          <MovieSearchBar />
         </div>
       </section>
 
