@@ -10,7 +10,6 @@ import AdminPage from "./pages/Admin";
 import AuthPage from "./pages/Auth";
 import Profile from "./pages/Profile";
 import AdminLogin from "./pages/AdminLogin";
-import PaymentDummy from "./pages/PaymentDummy";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -41,7 +40,6 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/payment-dummy" element={<PaymentDummy />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

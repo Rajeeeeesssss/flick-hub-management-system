@@ -1,4 +1,3 @@
-
 import { movies } from "@/data/movies";
 import MovieCard from "@/components/MovieCard";
 import { Link } from "react-router-dom";
@@ -30,7 +29,6 @@ const Home = () => {
             <Button asChild size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black">
               <Link to={`/movie/${heroMovie.id}`}>View Details</Link>
             </Button>
-            {/* Admin button removed */}
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent" />
@@ -54,4 +52,3 @@ const Home = () => {
 };
 
 export default Home;
-
