@@ -1,57 +1,141 @@
-
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { movies } from "@/data/movies";
 import MovieCard from "@/components/MovieCard";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import MovieSearchBar from "@/components/MovieSearchBar";
+import StaffSection from "@/components/StaffSection";
 
 const Home = () => {
-  const heroMovie = movies[0];
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: promotions } = useQuery({
+    queryKey: ["promotions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("is_active", true)
+        .gte("end_date", new Date().toISOString().split('T')[0]);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredMovies = movies.filter(movie =>
+    movie.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    movie.genre.some(g => g.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
-    <div className="flex-1">
-      {/* Movie SearchBar */}
-      <MovieSearchBar />
-      {/* Hero section */}
-      <section className="relative w-full h-[60vh] md:h-[80vh] animate-fade-in">
-        <div className="absolute inset-0 bg-black/50 z-10" />
-        <img src={heroMovie.heroUrl} alt={heroMovie.title} className="w-full h-full object-cover"/>
-        <div className="absolute z-20 bottom-0 left-0 p-8 md:p-12 lg:p-16 text-white">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tighter" style={{ animationDelay: '0.2s' }}>
-            {heroMovie.title}
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="relative h-[80vh] bg-gradient-to-r from-primary/80 to-primary/60 flex items-center justify-center text-white">
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 container mx-auto px-4 text-center">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+            Flick Hub
           </h1>
-          <p className="mt-2 md:mt-4 max-w-lg text-lg text-foreground/80" style={{ animationDelay: '0.4s' }}>
-            {heroMovie.description}
+          <p className="text-xl md:text-2xl opacity-90 mb-8 max-w-2xl mx-auto">
+            Your ultimate destination for the latest movies and unforgettable cinema experiences
           </p>
-          <div className="mt-6 flex gap-4" style={{ animationDelay: '0.6s' }}>
-            <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link to={`/movie/${heroMovie.id}`}>Book Tickets</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black">
-              <Link to={`/movie/${heroMovie.id}`}>View Details</Link>
-            </Button>
-            {/* Admin button removed */}
-          </div>
+          <MovieSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      <main className="container py-12">
-        <h2 className="text-3xl font-bold tracking-tight mb-8">Now Showing</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-          {movies.map((movie, index) => (
-            <MovieCard 
-              key={movie.id} 
-              movie={movie} 
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 100}ms` }}
-            />
-          ))}
+      {/* Promotions Section */}
+      {promotions && promotions.length > 0 && (
+        <section className="py-16 bg-secondary/5">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-8">Current Promotions</h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {promotions.map((promotion) => (
+                <div key={promotion.id} className="bg-white rounded-lg shadow-md p-6 border border-primary/10">
+                  <h3 className="text-xl font-semibold mb-2 text-primary">{promotion.title}</h3>
+                  {promotion.description && (
+                    <p className="text-muted-foreground mb-3">{promotion.description}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-green-600">
+                      {promotion.discount_percentage ? `${promotion.discount_percentage}% OFF` : 
+                       promotion.discount_amount ? `$${promotion.discount_amount} OFF` : 'Special Offer'}
+                    </div>
+                    {promotion.promo_code && (
+                      <div className="bg-primary/10 px-3 py-1 rounded text-primary font-mono text-sm">
+                        Code: {promotion.promo_code}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Valid until {new Date(promotion.end_date).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Movies Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Now Showing</h2>
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredMovies.map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+          {filteredMovies.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-lg text-muted-foreground">
+                No movies found matching your search.
+              </p>
+            </div>
+          )}
         </div>
-      </main>
+      </section>
+
+      {/* Staff Section */}
+      <StaffSection />
+
+      {/* Features Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-12">Why Choose Flick Hub?</h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl">🎬</span>
+              </div>
+              <h3 className="text-xl font-semibold">Latest Movies</h3>
+              <p className="text-muted-foreground">
+                Catch the newest blockbusters and indie films as soon as they're released
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl">🎟️</span>
+              </div>
+              <h3 className="text-xl font-semibold">Easy Booking</h3>
+              <p className="text-muted-foreground">
+                Simple and quick ticket booking with seat selection and payment options
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl">✨</span>
+              </div>
+              <h3 className="text-xl font-semibold">Premium Experience</h3>
+              <p className="text-muted-foreground">
+                State-of-the-art screens, sound systems, and comfortable seating
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
 export default Home;
-

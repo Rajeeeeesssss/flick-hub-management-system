@@ -21,14 +21,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Info, RefreshCcw } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Info, RefreshCcw, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { movies, Movie } from "@/data/movies";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useNavigate } from "react-router-dom";
 import * as React from "react";
+import { useBookings, useUpdateBookingStatus } from "@/hooks/useBookings";
+import { useStaff } from "@/hooks/useStaff";
+import { useLeaveRequests, useUpdateLeaveRequest } from "@/hooks/useLeaveRequests";
+import { usePromotions, useTogglePromotionStatus } from "@/hooks/usePromotions";
+import { useMoviesDb, useToggleMovieStatus } from "@/hooks/useMoviesDb";
+import { format } from "date-fns";
 
 function isEmailConfirmed(user: any) {
   return !!(user?.email_confirmed_at || user?.confirmed_at);
@@ -38,6 +43,19 @@ const AdminPage = () => {
   const { user, loading } = useAuth();
   const { data: isAdmin, isLoading: loadingAdminRole, error: adminRoleError } = useAdminRole(user?.id);
   const navigate = useNavigate();
+
+  // Data hooks
+  const { data: bookings, isLoading: bookingsLoading } = useBookings();
+  const { data: staff, isLoading: staffLoading } = useStaff();
+  const { data: leaveRequests, isLoading: leaveRequestsLoading } = useLeaveRequests();
+  const { data: promotions, isLoading: promotionsLoading } = usePromotions();
+  const { data: movies, isLoading: moviesLoading } = useMoviesDb();
+
+  // Mutation hooks
+  const updateBookingStatus = useUpdateBookingStatus();
+  const updateLeaveRequest = useUpdateLeaveRequest();
+  const togglePromotionStatus = useTogglePromotionStatus();
+  const toggleMovieStatus = useToggleMovieStatus();
 
   // Error state for why the admin dashboard is not accessible
   let debugMessage = "";
@@ -169,159 +187,501 @@ const AdminPage = () => {
     );
   }
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="outline" className="text-green-600">Active</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>;
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="text-green-600">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   // --- Admin panel UI ----------
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          <Tabs defaultValue="movies">
+          <Tabs defaultValue="bookings">
             <div className="flex items-center pb-4">
               <TabsList>
+                <TabsTrigger value="bookings">Bookings</TabsTrigger>
                 <TabsTrigger value="movies">Movies</TabsTrigger>
                 <TabsTrigger value="staff">Staff</TabsTrigger>
-                <TabsTrigger value="shifts">Shifts</TabsTrigger>
+                <TabsTrigger value="leave-requests">Leave Requests</TabsTrigger>
+                <TabsTrigger value="promotions">Promotions</TabsTrigger>
                 <TabsTrigger value="reports">Reports</TabsTrigger>
               </TabsList>
-              <div className="ml-auto flex items-center gap-2">
-                <Button size="sm" className="h-8 gap-1">
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Add Movie
-                  </span>
-                </Button>
-              </div>
             </div>
-            <TabsContent value="movies">
+
+            {/* Bookings Tab */}
+            <TabsContent value="bookings">
               <Card>
                 <CardHeader>
-                  <CardTitle>Movies</CardTitle>
+                  <CardTitle>Booking Management</CardTitle>
                   <CardDescription>
-                    Manage your movies and view their sales performance.
+                    Manage customer bookings, approve cancellations and view booking details.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Genre
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Release Date
-                        </TableHead>
-                        <TableHead>
-                          <span className="sr-only">Actions</span>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {movies.map((movie: Movie) => (
-                        <TableRow key={movie.id}>
-                          <TableCell className="font-medium">
-                            {movie.title}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Now Showing</Badge>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {movie.genre.join(", ")}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {movie.releaseDate}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Toggle menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                  {bookingsLoading ? (
+                    <div className="flex justify-center p-4">Loading bookings...</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Movie ID</TableHead>
+                          <TableHead>Seat</TableHead>
+                          <TableHead>Show Time</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Language</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead>
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {bookings?.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell className="font-medium">
+                              Movie #{booking.movie_id}
+                            </TableCell>
+                            <TableCell>{booking.seat_number}</TableCell>
+                            <TableCell>
+                              {format(new Date(booking.show_time), 'MMM dd, yyyy HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(booking.status)}
+                            </TableCell>
+                            <TableCell className="capitalize">{booking.language}</TableCell>
+                            <TableCell>
+                              {format(new Date(booking.created_at), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  {booking.status !== 'cancelled' && (
+                                    <DropdownMenuItem
+                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'cancelled' })}
+                                    >
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Cancel Booking
+                                    </DropdownMenuItem>
+                                  )}
+                                  {booking.status === 'cancelled' && (
+                                    <DropdownMenuItem
+                                      onClick={() => updateBookingStatus.mutate({ id: booking.id, status: 'active' })}
+                                    >
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Reactivate
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Movies Tab */}
+            <TabsContent value="movies">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Movie Management</CardTitle>
+                  <CardDescription>
+                    Manage movie listings and their status.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {moviesLoading ? (
+                    <div className="flex justify-center p-4">Loading movies...</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Genre</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Rating</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Language</TableHead>
+                          <TableHead>
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {movies?.map((movie) => (
+                          <TableRow key={movie.id}>
+                            <TableCell className="font-medium">
+                              {movie.title}
+                            </TableCell>
+                            <TableCell>{movie.genre.join(", ")}</TableCell>
+                            <TableCell>{movie.duration} min</TableCell>
+                            <TableCell>{movie.rating}</TableCell>
+                            <TableCell>
+                              {movie.is_active ? (
+                                <Badge variant="outline" className="text-green-600">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="capitalize">{movie.language}</TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => toggleMovieStatus.mutate({ id: movie.id, is_active: !movie.is_active })}
+                                  >
+                                    {movie.is_active ? 'Deactivate' : 'Activate'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Staff Tab */}
             <TabsContent value="staff">
               <Card>
                 <CardHeader>
                   <CardTitle>Staff Management</CardTitle>
                   <CardDescription>
-                    Manage your staff members. Connect to Supabase to enable this feature.
+                    Manage your staff members and their information.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-8">
-                    <div className="flex flex-col items-center gap-1 text-center">
-                      <h3 className="text-2xl font-bold tracking-tight">
-                        You have no staff members yet
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        You can start managing staff once you add them.
-                      </p>
-                      <Button className="mt-4">Add Staff</Button>
+                  {staffLoading ? (
+                    <div className="flex justify-center p-4">Loading staff...</div>
+                  ) : staff && staff.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Hire Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {staff.map((member) => (
+                          <TableRow key={member.id}>
+                            <TableCell className="font-medium">
+                              {member.name}
+                            </TableCell>
+                            <TableCell>{member.email}</TableCell>
+                            <TableCell>{member.position}</TableCell>
+                            <TableCell>{member.department || 'N/A'}</TableCell>
+                            <TableCell>
+                              {getStatusBadge(member.status)}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(member.hire_date), 'MMM dd, yyyy')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-8">
+                      <div className="flex flex-col items-center gap-1 text-center">
+                        <h3 className="text-2xl font-bold tracking-tight">
+                          You have no staff members yet
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          You can start managing staff once you add them.
+                        </p>
+                        <Button className="mt-4">Add Staff</Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="shifts">
+
+            {/* Leave Requests Tab */}
+            <TabsContent value="leave-requests">
               <Card>
                 <CardHeader>
-                  <CardTitle>Shift Management</CardTitle>
+                  <CardTitle>Leave Request Management</CardTitle>
                   <CardDescription>
-                    Manage staff shifts. Connect to Supabase to enable this feature.
+                    Review and manage staff leave requests.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-8">
-                    <div className="flex flex-col items-center gap-1 text-center">
-                      <h3 className="text-2xl font-bold tracking-tight">
-                        No shifts scheduled
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        You can start managing shifts once you add staff.
-                      </p>
-                      <Button className="mt-4">Create Shift</Button>
+                  {leaveRequestsLoading ? (
+                    <div className="flex justify-center p-4">Loading leave requests...</div>
+                  ) : leaveRequests && leaveRequests.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Staff Member</TableHead>
+                          <TableHead>Leave Type</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Days</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Reason</TableHead>
+                          <TableHead>
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {leaveRequests.map((request) => (
+                          <TableRow key={request.id}>
+                            <TableCell className="font-medium">
+                              {request.staff?.name || 'Unknown'}
+                              <div className="text-sm text-muted-foreground">
+                                {request.staff?.position}
+                              </div>
+                            </TableCell>
+                            <TableCell className="capitalize">{request.leave_type}</TableCell>
+                            <TableCell>
+                              {format(new Date(request.start_date), 'MMM dd')} - {format(new Date(request.end_date), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell>{request.days_requested} days</TableCell>
+                            <TableCell>
+                              {getStatusBadge(request.status)}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {request.reason || 'No reason provided'}
+                            </TableCell>
+                            <TableCell>
+                              {request.status === 'pending' && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">Toggle menu</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => updateLeaveRequest.mutate({ id: request.id, status: 'approved' })}
+                                    >
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => updateLeaveRequest.mutate({ id: request.id, status: 'rejected' })}
+                                    >
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-8">
+                      <div className="flex flex-col items-center gap-1 text-center">
+                        <h3 className="text-2xl font-bold tracking-tight">
+                          No leave requests
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Staff leave requests will appear here when submitted.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Promotions Tab */}
+            <TabsContent value="promotions">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Promotion Management</CardTitle>
+                  <CardDescription>
+                    Manage promotional offers and discount codes.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {promotionsLoading ? (
+                    <div className="flex justify-center p-4">Loading promotions...</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Discount</TableHead>
+                          <TableHead>Valid Period</TableHead>
+                          <TableHead>Usage</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {promotions?.map((promotion) => (
+                          <TableRow key={promotion.id}>
+                            <TableCell className="font-medium">
+                              {promotion.title}
+                            </TableCell>
+                            <TableCell>
+                              <code className="bg-muted px-2 py-1 rounded text-xs">
+                                {promotion.promo_code || 'No code'}
+                              </code>
+                            </TableCell>
+                            <TableCell>
+                              {promotion.discount_percentage ? `${promotion.discount_percentage}%` : 
+                               promotion.discount_amount ? `$${promotion.discount_amount}` : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(promotion.start_date), 'MMM dd')} - {format(new Date(promotion.end_date), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              {promotion.used_count}/{promotion.usage_limit || '∞'}
+                            </TableCell>
+                            <TableCell>
+                              {promotion.is_active ? (
+                                <Badge variant="outline" className="text-green-600">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => togglePromotionStatus.mutate({ id: promotion.id, is_active: !promotion.is_active })}
+                                  >
+                                    {promotion.is_active ? 'Deactivate' : 'Activate'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Reports Tab */}
             <TabsContent value="reports">
               <Card>
                 <CardHeader>
                   <CardTitle>Reports</CardTitle>
                   <CardDescription>
-                    View sales and performance reports. This data will be populated from your database.
+                    View analytics and performance reports.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-8">
-                        <div className="flex flex-col items-center gap-1 text-center">
-                            <h3 className="text-2xl font-bold tracking-tight">
-                                No reports available
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Reports will be generated as you start getting sales.
-                            </p>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Total Bookings
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{bookings?.length || 0}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Active Movies
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {movies?.filter(m => m.is_active).length || 0}
                         </div>
-                    </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Staff Members
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{staff?.length || 0}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Active Promotions
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {promotions?.filter(p => p.is_active).length || 0}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

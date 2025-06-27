@@ -45,6 +45,123 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          days_requested: number
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string | null
+          staff_id: string
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          days_requested: number
+          end_date: string
+          id?: string
+          leave_type: string
+          reason?: string | null
+          staff_id: string
+          start_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          days_requested?: number
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          staff_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movies: {
+        Row: {
+          actors: string[] | null
+          created_at: string | null
+          description: string | null
+          director: string | null
+          duration: number
+          genre: string[]
+          hero_url: string | null
+          id: number
+          is_active: boolean | null
+          language: string | null
+          poster_url: string | null
+          rating: string | null
+          release_date: string | null
+          title: string
+          trailer_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actors?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          director?: string | null
+          duration: number
+          genre?: string[]
+          hero_url?: string | null
+          id?: number
+          is_active?: boolean | null
+          language?: string | null
+          poster_url?: string | null
+          rating?: string | null
+          release_date?: string | null
+          title: string
+          trailer_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actors?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          director?: string | null
+          duration?: number
+          genre?: string[]
+          hero_url?: string | null
+          id?: number
+          is_active?: boolean | null
+          language?: string | null
+          poster_url?: string | null
+          rating?: string | null
+          release_date?: string | null
+          title?: string
+          trailer_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -60,6 +177,99 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          promo_code: string | null
+          start_date: string
+          title: string
+          updated_at: string | null
+          usage_limit: number | null
+          used_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          promo_code?: string | null
+          start_date: string
+          title: string
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          promo_code?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          hire_date: string
+          id: string
+          name: string
+          phone: string | null
+          position: string
+          salary: number | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          hire_date?: string
+          id?: string
+          name: string
+          phone?: string | null
+          position: string
+          salary?: number | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          hire_date?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          position?: string
+          salary?: number | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
