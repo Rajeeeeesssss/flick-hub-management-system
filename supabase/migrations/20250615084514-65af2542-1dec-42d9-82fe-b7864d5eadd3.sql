@@ -1,4 +1,0 @@
-
-ALTER TABLE public.bookings
-  ADD COLUMN show_time TIMESTAMPTZ NOT NULL DEFAULT now(),
-  ADD COLUMN seat_number TEXT NOT NULL DEFAULT 'A1';

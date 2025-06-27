@@ -15,8 +15,6 @@ export type Database = {
           created_at: string
           id: string
           movie_id: number
-          seat_number: string
-          show_time: string
           status: string
           user_id: string
         }
@@ -25,8 +23,6 @@ export type Database = {
           created_at?: string
           id?: string
           movie_id: number
-          seat_number?: string
-          show_time?: string
           status?: string
           user_id: string
         }
@@ -35,8 +31,6 @@ export type Database = {
           created_at?: string
           id?: string
           movie_id?: number
-          seat_number?: string
-          show_time?: string
           status?: string
           user_id?: string
         }

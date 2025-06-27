@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { movies } from "@/data/movies";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import UserBookings from "./UserBookings";
-import BookTicketDialog from "@/components/BookTicketDialog";
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,65 +18,44 @@ const MovieDetail = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
 
   if (!movie) {
     return <NotFound />;
   }
 
-  const handleBookClick = () => {
+  const handleBookClick = async () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    setDialogOpen(true);
-  };
-
-  // Add language option to booking
-  const handleBookConfirm = async (seats: string[], showTime: string, language: string) => {
     setBookingLoading(true);
-    const errors: string[] = [];
-    // Calculate show time date
-    const today = new Date();
-    const [hour, min] = showTime.split(":");
-    const showDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hour), parseInt(min), 0);
-
-    // Prepare batch insert for all selected seats
-    const inserts = seats.map(seat => ({
-      user_id: user.id,
-      movie_id: movie.id,
-      seat_number: seat,
-      show_time: showDate.toISOString(),
-      status: "active",
-      language: language,
-    }));
-
-    // Check if user has any existing active bookings for this movie & show time & seat
-    // (for simplicity, just prevent user from booking same seat for same movie/show_time!)
-    // You may want to add more constraints later
+    // Check if already booked (active)
     const { data: existing } = await supabase
       .from("bookings")
       .select("*")
       .eq("user_id", user.id)
       .eq("movie_id", movie.id)
       .eq("status", "active")
-      .eq("show_time", showDate.toISOString());
-
-    if (existing && existing.some(b => seats.includes(b.seat_number))) {
+      .maybeSingle();
+    if (existing) {
       toast({
-        title: "Seat already booked",
-        description: "You already booked one or more of the selected seats at this time!",
+        title: "Already Booked",
+        description: "You have already booked this movie!",
         variant: "destructive",
       });
       setBookingLoading(false);
-      setDialogOpen(false);
       return;
     }
-
-    const { error } = await supabase.from("bookings").insert(inserts);
+    // Insert booking
+    const { error } = await supabase.from("bookings").insert([
+      {
+        user_id: user.id,
+        movie_id: movie.id,
+        status: "active",
+      },
+    ]);
     setBookingLoading(false);
-    setDialogOpen(false);
     if (error) {
       toast({
         title: "Booking Failed",
@@ -86,7 +65,7 @@ const MovieDetail = () => {
     } else {
       toast({
         title: "Booking Success",
-        description: `Booked ${seats.length} ticket${seats.length > 1 ? 's' : ''}!`,
+        description: "Your booking was successful!",
       });
     }
   };
@@ -127,14 +106,8 @@ const MovieDetail = () => {
                 onClick={handleBookClick}
                 disabled={loading || bookingLoading}
               >
-                {user ? "Book Tickets Now" : "Login to Book Tickets"}
+                {user ? (bookingLoading ? "Booking..." : "Book Tickets Now") : "Login to Book Tickets"}
               </Button>
-              <BookTicketDialog
-                open={dialogOpen}
-                onOpenChange={setDialogOpen}
-                onConfirm={handleBookConfirm}
-                loading={bookingLoading}
-              />
             </div>
 
             {/* Booking list for this movie, for the current user */}
