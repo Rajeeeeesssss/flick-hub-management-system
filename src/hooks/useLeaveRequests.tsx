@@ -31,7 +31,7 @@ export function useLeaveRequests() {
         .from("leave_requests")
         .select(`
           *,
-          staff:staff_id (
+          staff!staff_id (
             name,
             email,
             position
