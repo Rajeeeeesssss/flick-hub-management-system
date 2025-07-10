@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,72 @@ const AdminLogin = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { data: isAdmin } = useAdminRole(user?.id);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Redirect after successful admin login
-  if (!authLoading && user && window.location.pathname === "/admin-login") {
+  // Handle OTP verification from URL on component mount
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+      
+      if (accessToken && refreshToken) {
+        setVerifying(true);
+        try {
+          // Manually set the session from URL tokens
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            throw error;
+          }
+          
+          toast({
+            title: "Login Successful",
+            description: "Welcome back, Admin!",
+          });
+          
+          // Redirect to admin page after successful verification
+          setTimeout(() => {
+            navigate("/admin");
+          }, 1000);
+          
+        } catch (error: any) {
+          setError(error.message);
+          toast({
+            variant: "destructive",
+            title: "Verification Failed",
+            description: error.message,
+          });
+        } finally {
+          setVerifying(false);
+        }
+      }
+    };
+
+    handleAuthCallback();
+  }, [navigate, toast]);
+
+  // Show verification loading state
+  if (verifying) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-primary/80 text-white">
+        <span className="flex items-center gap-2">
+          <ShieldAlert className="w-6 h-6 text-blue-400 animate-pulse" />
+          Verifying your login...
+        </span>
+      </div>
+    );
+  }
+
+  // Redirect after successful admin login (but not during verification)
+  if (!authLoading && user && !verifying) {
     setTimeout(() => navigate("/admin"), 100);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-primary/80 text-white">
