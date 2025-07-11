@@ -63,3 +63,65 @@ export function useCreateStaff() {
     },
   });
 }
+
+export function useUpdateStaff() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, staffData }: { id: string; staffData: Partial<Omit<Staff, 'id' | 'created_at' | 'updated_at'>> }) => {
+      const { data, error } = await supabase
+        .from("staff")
+        .update(staffData)
+        .eq("id", id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+      toast({
+        title: "Success",
+        description: "Staff member updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update staff member",
+      });
+    },
+  });
+}
+
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("staff")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+      toast({
+        title: "Success",
+        description: "Staff member deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete staff member",
+      });
+    },
+  });
+}

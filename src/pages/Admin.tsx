@@ -29,10 +29,14 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { useNavigate } from "react-router-dom";
 import * as React from "react";
 import { useBookings, useUpdateBookingStatus } from "@/hooks/useBookings";
-import { useStaff } from "@/hooks/useStaff";
+import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff } from "@/hooks/useStaff";
 import { useLeaveRequests, useUpdateLeaveRequest } from "@/hooks/useLeaveRequests";
-import { usePromotions, useTogglePromotionStatus } from "@/hooks/usePromotions";
-import { useMoviesDb, useToggleMovieStatus } from "@/hooks/useMoviesDb";
+import { usePromotions, useCreatePromotion, useUpdatePromotion, useDeletePromotion, useTogglePromotionStatus } from "@/hooks/usePromotions";
+import { useMoviesDb, useCreateMovie, useUpdateMovie, useDeleteMovie, useToggleMovieStatus } from "@/hooks/useMoviesDb";
+import { StaffFormDialog } from "@/components/StaffFormDialog";
+import { MovieFormDialog } from "@/components/MovieFormDialog";
+import { PromotionFormDialog } from "@/components/PromotionFormDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 
 function isEmailConfirmed(user: any) {
@@ -56,6 +60,15 @@ const AdminPage = () => {
   const updateLeaveRequest = useUpdateLeaveRequest();
   const togglePromotionStatus = useTogglePromotionStatus();
   const toggleMovieStatus = useToggleMovieStatus();
+  
+  // Staff mutations
+  const deleteStaff = useDeleteStaff();
+  
+  // Movie mutations
+  const deleteMovie = useDeleteMovie();
+  
+  // Promotion mutations
+  const deletePromotion = useDeletePromotion();
 
   // Error state for why the admin dashboard is not accessible
   let debugMessage = "";
@@ -318,10 +331,7 @@ const AdminPage = () => {
                         Manage movie listings and their status.
                       </CardDescription>
                     </div>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Movie
-                    </Button>
+                    <MovieFormDialog />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -373,17 +383,44 @@ const AdminPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem>
-                                    Edit Movie
-                                  </DropdownMenuItem>
+                                  <MovieFormDialog 
+                                    movie={movie} 
+                                    isEdit={true}
+                                    trigger={
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        Edit Movie
+                                      </DropdownMenuItem>
+                                    }
+                                  />
                                   <DropdownMenuItem
                                     onClick={() => toggleMovieStatus.mutate({ id: movie.id, is_active: !movie.is_active })}
                                   >
                                     {movie.is_active ? 'Deactivate' : 'Activate'}
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-red-600">
-                                    Delete Movie
-                                  </DropdownMenuItem>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                        Delete Movie
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Movie</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete "{movie.title}"? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => deleteMovie.mutate(movie.id)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
@@ -400,10 +437,15 @@ const AdminPage = () => {
             <TabsContent value="staff">
               <Card>
                 <CardHeader>
-                  <CardTitle>Staff Management</CardTitle>
-                  <CardDescription>
-                    Manage your staff members and their information.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Staff Management</CardTitle>
+                      <CardDescription>
+                        Manage your staff members and their information.
+                      </CardDescription>
+                    </div>
+                    <StaffFormDialog />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {staffLoading ? (
@@ -416,27 +458,80 @@ const AdminPage = () => {
                           <TableHead>Email</TableHead>
                           <TableHead>Position</TableHead>
                           <TableHead>Department</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Hire Date</TableHead>
+                           <TableHead>Status</TableHead>
+                           <TableHead>Hire Date</TableHead>
+                           <TableHead>
+                             <span className="sr-only">Actions</span>
+                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {staff.map((member) => (
-                          <TableRow key={member.id}>
-                            <TableCell className="font-medium">
-                              {member.name}
-                            </TableCell>
-                            <TableCell>{member.email}</TableCell>
-                            <TableCell>{member.position}</TableCell>
-                            <TableCell>{member.department || 'N/A'}</TableCell>
-                            <TableCell>
-                              {getStatusBadge(member.status)}
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(member.hire_date), 'MMM dd, yyyy')}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                         {staff.map((staffMember) => (
+                           <TableRow key={staffMember.id}>
+                             <TableCell className="font-medium">
+                               {staffMember.name}
+                             </TableCell>
+                             <TableCell>{staffMember.email}</TableCell>
+                             <TableCell>{staffMember.position}</TableCell>
+                             <TableCell>{staffMember.department || 'N/A'}</TableCell>
+                             <TableCell>
+                               {getStatusBadge(staffMember.status)}
+                             </TableCell>
+                             <TableCell>
+                               {format(new Date(staffMember.hire_date), 'MMM dd, yyyy')}
+                             </TableCell>
+                             <TableCell>
+                               <DropdownMenu>
+                                 <DropdownMenuTrigger asChild>
+                                   <Button
+                                     aria-haspopup="true"
+                                     size="icon"
+                                     variant="ghost"
+                                   >
+                                     <MoreHorizontal className="h-4 w-4" />
+                                     <span className="sr-only">Toggle menu</span>
+                                   </Button>
+                                 </DropdownMenuTrigger>
+                                 <DropdownMenuContent align="end">
+                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                   <StaffFormDialog 
+                                     staff={staffMember} 
+                                     isEdit={true}
+                                     trigger={
+                                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                         Edit Staff
+                                       </DropdownMenuItem>
+                                     }
+                                   />
+                                   <AlertDialog>
+                                     <AlertDialogTrigger asChild>
+                                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                         Delete Staff
+                                       </DropdownMenuItem>
+                                     </AlertDialogTrigger>
+                                     <AlertDialogContent>
+                                       <AlertDialogHeader>
+                                         <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                                         <AlertDialogDescription>
+                                           Are you sure you want to delete "{staffMember.name}"? This action cannot be undone.
+                                         </AlertDialogDescription>
+                                       </AlertDialogHeader>
+                                       <AlertDialogFooter>
+                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                         <AlertDialogAction 
+                                           onClick={() => deleteStaff.mutate(staffMember.id)}
+                                           className="bg-red-600 hover:bg-red-700"
+                                         >
+                                           Delete
+                                         </AlertDialogAction>
+                                       </AlertDialogFooter>
+                                     </AlertDialogContent>
+                                   </AlertDialog>
+                                 </DropdownMenuContent>
+                               </DropdownMenu>
+                             </TableCell>
+                           </TableRow>
+                         ))}
                       </TableBody>
                     </Table>
                   ) : (
@@ -565,10 +660,7 @@ const AdminPage = () => {
                         Manage promotional offers and discount codes.
                       </CardDescription>
                     </div>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Promotion
-                    </Button>
+                    <PromotionFormDialog />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -631,17 +723,44 @@ const AdminPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem>
-                                    Edit Promotion
-                                  </DropdownMenuItem>
+                                  <PromotionFormDialog 
+                                    promotion={promotion} 
+                                    isEdit={true}
+                                    trigger={
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        Edit Promotion
+                                      </DropdownMenuItem>
+                                    }
+                                  />
                                   <DropdownMenuItem
                                     onClick={() => togglePromotionStatus.mutate({ id: promotion.id, is_active: !promotion.is_active })}
                                   >
                                     {promotion.is_active ? 'Deactivate' : 'Activate'}
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-red-600">
-                                    Delete Promotion
-                                  </DropdownMenuItem>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                        Delete Promotion
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Promotion</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete "{promotion.title}"? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => deletePromotion.mutate(promotion.id)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>

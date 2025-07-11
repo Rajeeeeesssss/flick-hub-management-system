@@ -34,6 +34,99 @@ export function usePromotions() {
   });
 }
 
+export function useCreatePromotion() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (promotionData: Omit<Promotion, 'id' | 'created_at' | 'updated_at' | 'used_count'>) => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .insert(promotionData)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["promotions"] });
+      toast({
+        title: "Success",
+        description: "Promotion created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create promotion",
+      });
+    },
+  });
+}
+
+export function useUpdatePromotion() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, promotionData }: { id: string; promotionData: Partial<Omit<Promotion, 'id' | 'created_at' | 'updated_at'>> }) => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .update(promotionData)
+        .eq("id", id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["promotions"] });
+      toast({
+        title: "Success",
+        description: "Promotion updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update promotion",
+      });
+    },
+  });
+}
+
+export function useDeletePromotion() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("promotions")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["promotions"] });
+      toast({
+        title: "Success",
+        description: "Promotion deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete promotion",
+      });
+    },
+  });
+}
+
 export function useTogglePromotionStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

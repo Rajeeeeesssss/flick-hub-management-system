@@ -37,6 +37,99 @@ export function useMoviesDb() {
   });
 }
 
+export function useCreateMovie() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (movieData: Omit<MovieDb, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from("movies")
+        .insert(movieData)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movies-db"] });
+      toast({
+        title: "Success",
+        description: "Movie created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create movie",
+      });
+    },
+  });
+}
+
+export function useUpdateMovie() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, movieData }: { id: number; movieData: Partial<Omit<MovieDb, 'id' | 'created_at' | 'updated_at'>> }) => {
+      const { data, error } = await supabase
+        .from("movies")
+        .update(movieData)
+        .eq("id", id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movies-db"] });
+      toast({
+        title: "Success",
+        description: "Movie updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update movie",
+      });
+    },
+  });
+}
+
+export function useDeleteMovie() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from("movies")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movies-db"] });
+      toast({
+        title: "Success",
+        description: "Movie deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete movie",
+      });
+    },
+  });
+}
+
 export function useToggleMovieStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
