@@ -311,10 +311,18 @@ const AdminPage = () => {
             <TabsContent value="movies">
               <Card>
                 <CardHeader>
-                  <CardTitle>Movie Management</CardTitle>
-                  <CardDescription>
-                    Manage movie listings and their status.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Movie Management</CardTitle>
+                      <CardDescription>
+                        Manage movie listings and their status.
+                      </CardDescription>
+                    </div>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Movie
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {moviesLoading ? (
@@ -365,10 +373,16 @@ const AdminPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem>
+                                    Edit Movie
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => toggleMovieStatus.mutate({ id: movie.id, is_active: !movie.is_active })}
                                   >
                                     {movie.is_active ? 'Deactivate' : 'Activate'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-red-600">
+                                    Delete Movie
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -544,10 +558,18 @@ const AdminPage = () => {
             <TabsContent value="promotions">
               <Card>
                 <CardHeader>
-                  <CardTitle>Promotion Management</CardTitle>
-                  <CardDescription>
-                    Manage promotional offers and discount codes.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Promotion Management</CardTitle>
+                      <CardDescription>
+                        Manage promotional offers and discount codes.
+                      </CardDescription>
+                    </div>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Promotion
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {promotionsLoading ? (
@@ -609,10 +631,16 @@ const AdminPage = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem>
+                                    Edit Promotion
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => togglePromotionStatus.mutate({ id: promotion.id, is_active: !promotion.is_active })}
                                   >
                                     {promotion.is_active ? 'Deactivate' : 'Activate'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-red-600">
+                                    Delete Promotion
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
