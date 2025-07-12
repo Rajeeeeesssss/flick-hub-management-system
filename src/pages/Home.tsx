@@ -2,13 +2,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { movies } from "@/data/movies";
+import { useMoviesDb } from "@/hooks/useMoviesDb";
 import MovieCard from "@/components/MovieCard";
 import MovieSearchBar from "@/components/MovieSearchBar";
 import StaffSection from "@/components/StaffSection";
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch movies from database
+  const { data: movies = [] } = useMoviesDb();
 
   const { data: promotions } = useQuery({
     queryKey: ["promotions"],
@@ -24,10 +27,13 @@ const Home = () => {
     },
   });
 
-  const filteredMovies = movies.filter(movie =>
-    movie.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    movie.genre.some(g => g.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter movies from database - only show active movies
+  const filteredMovies = movies
+    .filter(movie => movie.is_active) // Only show active movies
+    .filter(movie =>
+      movie.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movie.genre.some(g => g.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,7 +90,20 @@ const Home = () => {
           <h2 className="text-3xl font-bold text-center mb-12">Now Showing</h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredMovies.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
+              <MovieCard key={movie.id} movie={{
+                id: movie.id,
+                title: movie.title,
+                genre: movie.genre,
+                duration: movie.duration,
+                rating: movie.rating || 'Not Rated',
+                releaseDate: movie.release_date || '',
+                director: movie.director || '',
+                description: movie.description || '',
+                posterUrl: movie.poster_url || '',
+                heroUrl: movie.hero_url || '',
+                language: movie.language || 'English',
+                certification: movie.rating || 'U'
+              }} />
             ))}
           </div>
           {filteredMovies.length === 0 && (

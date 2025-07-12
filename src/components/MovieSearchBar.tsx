@@ -3,7 +3,7 @@ import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { movies } from "@/data/movies";
+import { useMoviesDb } from "@/hooks/useMoviesDb";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 
@@ -12,17 +12,22 @@ const MovieSearchBar = () => {
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  
+  // Fetch movies from database
+  const { data: movies = [] } = useMoviesDb();
 
   // Filter movies for suggestions
   const suggestions = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return movies.filter(
-      (movie) =>
-        movie.title.toLowerCase().includes(q) ||
-        movie.genre.some((g) => g.toLowerCase().includes(q))
-    );
-  }, [query]);
+    return movies
+      .filter(movie => movie.is_active) // Only show active movies
+      .filter(
+        (movie) =>
+          movie.title.toLowerCase().includes(q) ||
+          movie.genre.some((g) => g.toLowerCase().includes(q))
+      );
+  }, [query, movies]);
 
   // On select, navigate and close suggestions
   const handleSelect = (movieId: number) => {
@@ -70,13 +75,13 @@ const MovieSearchBar = () => {
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <img
-                      src={movie.posterUrl}
+                      src={movie.poster_url || ''}
                       alt={movie.title}
                       className="w-10 h-14 object-cover rounded-[6px] border"
                     />
                     <span className="font-medium">{movie.title}</span>
                     <Badge variant="secondary">{movie.genre[0]}</Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">{movie.releaseDate}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{movie.release_date || ''}</span>
                   </CommandItem>
                 ))}
               </CommandList>
