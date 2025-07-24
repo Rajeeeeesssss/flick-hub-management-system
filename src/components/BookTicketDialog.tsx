@@ -79,7 +79,7 @@ export default function BookTicketDialog({
           <div>
             <label className="font-semibold block mb-2">Show Time</label>
             <select
-              className="border rounded px-3 py-2 w-full"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={showTime}
               onChange={e => setShowTime(e.target.value)}
               disabled={loading}
@@ -128,7 +128,7 @@ export default function BookTicketDialog({
           <div>
             <label className="font-semibold block mb-2">Language</label>
             <select
-              className="border rounded px-3 py-2 w-full"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={language}
               onChange={e => setLanguage(e.target.value)}
               disabled={loading}

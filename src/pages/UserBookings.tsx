@@ -14,14 +14,21 @@ type Booking = {
   seat_number: string;
 };
 
+type Movie = {
+  id: number;
+  title: string;
+};
+
 const UserBookings = ({ movieId }: { movieId: number }) => {
   const { user } = useAuth();
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     fetchBooking();
+    fetchMovie();
     // eslint-disable-next-line
   }, [user, movieId]);
 
@@ -40,6 +47,20 @@ const UserBookings = ({ movieId }: { movieId: number }) => {
     }
     setBooking(data || null);
     setLoading(false);
+  };
+
+  const fetchMovie = async () => {
+    const { data, error } = await supabase
+      .from("movies")
+      .select("id, title")
+      .eq("id", movieId)
+      .single();
+    
+    if (error) {
+      console.error("Error fetching movie:", error);
+    } else {
+      setMovie(data);
+    }
   };
 
   const handleCancel = async () => {
@@ -68,8 +89,8 @@ const UserBookings = ({ movieId }: { movieId: number }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-green-700 text-sm">
-        Booking active since {new Date(booking.created_at).toLocaleString()}.
+      <div className="text-primary text-sm">
+        Booking active for <span className="font-semibold">{movie?.title || `Movie #${movieId}`}</span> since {new Date(booking.created_at).toLocaleString()}.
         <br />
         <span className="font-semibold">Show time:</span> {new Date(booking.show_time).toLocaleString()}<br />
         <span className="font-semibold">Seat:</span> {booking.seat_number}

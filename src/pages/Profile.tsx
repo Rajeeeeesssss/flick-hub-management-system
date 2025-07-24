@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { movies } from "@/data/movies";
 import { User, Calendar, X } from "lucide-react";
 
 type Booking = {
@@ -17,14 +16,21 @@ type Booking = {
   seat_number: string;
 };
 
+type Movie = {
+  id: number;
+  title: string;
+};
+
 const Profile = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     fetchBookings();
+    fetchMovies();
     // eslint-disable-next-line
   }, [user]);
 
@@ -40,6 +46,17 @@ const Profile = () => {
     }
     setBookings(data || []);
     setLoading(false);
+  };
+
+  const fetchMovies = async () => {
+    const { data, error } = await supabase
+      .from("movies")
+      .select("id, title");
+    if (error) {
+      console.error("Error fetching movies:", error);
+    } else {
+      setMovies(data || []);
+    }
   };
 
   const handleCancel = async (bookingId: string) => {
@@ -73,9 +90,9 @@ const Profile = () => {
           {bookings.map((b) => {
             const movie = movies.find((m) => m.id === b.movie_id);
             return (
-              <div key={b.id} className="border rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-background">
+              <div key={b.id} className="border rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-card">
                 <div>
-                  <div className="font-bold">{movie?.title || "Movie #" + b.movie_id}</div>
+                  <div className="font-bold text-foreground">{movie?.title || "Movie #" + b.movie_id}</div>
                   <div className="text-muted-foreground text-sm flex gap-2 items-center">
                     <Calendar size={14} /> {new Date(b.show_time).toLocaleString()} | 
                     <span className="ml-2 font-semibold">Seat:</span> {b.seat_number}
