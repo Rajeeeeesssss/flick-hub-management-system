@@ -10,6 +10,7 @@ import AdminPage from "./pages/Admin";
 import AuthPage from "./pages/Auth";
 import Profile from "./pages/Profile";
 import AdminLogin from "./pages/AdminLogin";
+import StaffDashboard from "./pages/StaffDashboard";
 import PaymentDummy from "./pages/PaymentDummy";
 import OtpLogin from "./pages/OtpLogin";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/staff" element={<StaffDashboard />} />
             <Route path="/payment-dummy" element={<PaymentDummy />} />
             <Route path="/otp-login" element={<OtpLogin />} />
           </Route>
