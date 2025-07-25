@@ -175,24 +175,55 @@ export function MovieFormDialog({ movie, trigger, isEdit = false }: MovieFormDia
   }) => (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+      <div className="border-2 border-dashed border-border rounded-lg p-4">
         {preview ? (
-          <div className="relative">
-            <img src={preview} alt={label} className="w-full h-32 object-cover rounded" />
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              className="absolute top-2 right-2"
-              onClick={() => onChange(null)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2">
+            <div className="relative">
+              <img src={preview} alt={label} className="w-full h-32 object-cover rounded" />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute top-2 right-2"
+                onClick={() => onChange(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  onChange(file);
+                }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0] || null;
+                    onChange(file);
+                  };
+                  input.click();
+                }}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Change
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-4">
-            <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-600 mb-2">Upload {label.toLowerCase()}</p>
+            <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-2">Upload {label.toLowerCase()}</p>
             <Input
               type="file"
               accept="image/*"
