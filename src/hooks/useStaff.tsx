@@ -38,27 +38,53 @@ export function useCreateStaff() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (staffData: Omit<Staff, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from("staff")
-        .insert(staffData)
-        .select();
-      
-      if (error) throw error;
-      return data;
+    mutationFn: async (staffData: Omit<Staff, 'id' | 'created_at' | 'updated_at'> & { password?: string }) => {
+      // If password is provided, use edge function to create auth user and staff record
+      if (staffData.password) {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) {
+          throw new Error('Authentication required');
+        }
+
+        const { password, ...userData } = staffData;
+        
+        const { data, error } = await supabase.functions.invoke('create-staff-user', {
+          body: {
+            email: staffData.email,
+            password,
+            userData,
+          },
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Failed to create staff user');
+        }
+
+        return data.data;
+      } else {
+        // Create staff record without auth user (existing flow)
+        const { password, ...staffDataWithoutPassword } = staffData;
+        const { data, error } = await supabase
+          .from("staff")
+          .insert(staffDataWithoutPassword)
+          .select();
+        
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       toast({
         title: "Success",
-        description: "Staff member added successfully",
+        description: "Staff member added successfully with login credentials",
       });
     },
     onError: (error) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add staff member",
+        description: error.message || "Failed to add staff member",
       });
     },
   });

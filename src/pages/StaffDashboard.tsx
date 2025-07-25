@@ -105,7 +105,7 @@ const StaffDashboard = () => {
   };
 
   const fetchLeaveRequests = async () => {
-    if (!user || !staffProfile) return;
+    if (!staffProfile) return;
 
     try {
       const { data, error } = await supabase

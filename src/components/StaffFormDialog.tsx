@@ -18,6 +18,7 @@ export function StaffFormDialog({ staff, trigger, isEdit = false }: StaffFormDia
   const [formData, setFormData] = useState({
     name: staff?.name || "",
     email: staff?.email || "",
+    password: "", // Only for new staff
     phone: staff?.phone || "",
     position: staff?.position || "",
     department: staff?.department || "",
@@ -32,15 +33,19 @@ export function StaffFormDialog({ staff, trigger, isEdit = false }: StaffFormDia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const staffData = {
-        ...formData,
-        salary: formData.salary ? parseFloat(formData.salary) : null,
-        user_id: null, // Set to null for new staff members
-      };
-
       if (isEdit && staff) {
+        const { password, ...staffDataForUpdate } = formData;
+        const staffData = {
+          ...staffDataForUpdate,
+          salary: formData.salary ? parseFloat(formData.salary) : null,
+        };
         await updateStaff.mutateAsync({ id: staff.id, staffData });
       } else {
+        const staffData = {
+          ...formData,
+          salary: formData.salary ? parseFloat(formData.salary) : null,
+          user_id: null, // Will be set by the hook when creating auth user
+        };
         await createStaff.mutateAsync(staffData);
       }
       
@@ -49,6 +54,7 @@ export function StaffFormDialog({ staff, trigger, isEdit = false }: StaffFormDia
         setFormData({
           name: "",
           email: "",
+          password: "",
           phone: "",
           position: "",
           department: "",
@@ -103,6 +109,20 @@ export function StaffFormDialog({ staff, trigger, isEdit = false }: StaffFormDia
               required
             />
           </div>
+          
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Login Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Password for staff login"
+                required
+              />
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
